@@ -65,6 +65,7 @@ class Orderbook:
     buy: SortedDict  # SortedDict does not currently support typing. Type is SortedDict[int, Deque[LimitOrder]].
     sell: SortedDict
     ticker: str
+    tick_size: int
 
     @property
     def best_buy_price(self):

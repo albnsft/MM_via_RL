@@ -29,7 +29,6 @@ class OrderbookSimulator:
         database: HistoricalDatabase = None,
         outer_levels: int = 5,
         trading_date: datetime = datetime(2012, 6, 21),
-        verbose: bool = False
     ) -> None:
         self.ticker = ticker
         self.exchange = exchange or Exchange(ticker)
@@ -39,7 +38,6 @@ class OrderbookSimulator:
         self.n_levels = n_levels
         self.database = database or HistoricalDatabase()
         self.outer_levels = outer_levels
-        self.verbose = verbose
         # The following is for re-syncronisation with the historical data
         self.max_sell_price: int = 0
         self.min_buy_price: int = np.infty  # type:ignore
@@ -71,7 +69,7 @@ class OrderbookSimulator:
                 filled_internal_orders += filled.internal
                 filled_external_orders += filled.external
         self.now_is = until
-        if (self._near_exiting_initial_price_range or self._exiting_worst_price) :#and self.now_is.microsecond == 0:
+        if self._near_exiting_initial_price_range and self.now_is.microsecond == 0:
             self.update_outer_levels()
         return FilledOrders(internal=filled_internal_orders, external=filled_external_orders)
 
@@ -94,7 +92,7 @@ class OrderbookSimulator:
         """Update levels that had no initial orders at the start of the episode. If this is not done, the volume at
         these levels will be substantially lower than it should be. If agent orders exist at these levels, they will be
         cancelled and replaced at the back of the queue."""
-        if self.verbose: print(f"Updating outer levels. Current time is {self.now_is}.")
+        print(f"Updating outer levels. Current time is {self.now_is}.")
         orderbook_series = self.database.get_last_snapshot(self.now_is, ticker=self.ticker)
         orders_to_add = self._get_initial_orders_from_snapshot(orderbook_series, self._initial_prices_filter_function)
         internal_orders_to_replace = list()
@@ -102,7 +100,7 @@ class OrderbookSimulator:
             internal_book_side = getattr(self.exchange.internal_orderbook, order.direction)
             internal_orders_to_cancel = list()
             if order.price in internal_book_side.keys():
-                if self.verbose: print(
+                print(
                     "Resynchronising levels containing internal orders. These internal orders will be cancelled and"
                     + " replaced at the back of the queue."
                 )
@@ -155,14 +153,6 @@ class OrderbookSimulator:
         return (
             self.exchange.best_buy_price < self.min_buy_price + outer_proportion * self.initial_buy_price_range
             or self.exchange.best_sell_price > self.max_sell_price - outer_proportion * self.initial_sell_price_range
-        )
-
-    @property
-    def _exiting_worst_price(self) -> bool:
-        worst_buy, worst_sell = self.exchange.orderbook_price_range
-        return (
-            worst_buy < self.min_buy_price
-            or worst_sell > self.max_sell_price
         )
 
     def _reset_initial_price_ranges(self):

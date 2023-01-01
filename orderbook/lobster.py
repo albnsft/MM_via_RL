@@ -46,12 +46,11 @@ class LobsterData:
         Read message of that trading day
         """
         messages = pd.read_csv(message_file, header=None)
-        messages.columns = ['timestamp','event', 'id', 'size', 'price', 'direction']
+        messages.columns = ['timestamp', 'event', 'id', 'size', 'price', 'direction']
         messages['price'] /= 10000
         messages['event'] = messages['event'].map(lambda i: self.events[i])
         messages['direction'] = messages['direction'].map(lambda i: self.directions[i])
         messages['timestamp'] = messages['timestamp'].apply(lambda x: mydate + np.timedelta64(int(x * 1e9), 'ns'))
-        messages.set_index('timestamp', drop=True, inplace=True)
         messages['ticker'] = self.ticker
         return messages
 
@@ -74,8 +73,8 @@ class LobsterData:
     def read_daily_data(self, order_book_file, message_file, multi_days: bool = False):
         date = self.read_date(order_book_file)
         messages, orderbooks = self.read_messages(date, message_file), self.read_orderbooks(order_book_file)
-        orderbooks.index = messages.index
         messages, orderbooks = self.remove_hidden_exec(messages, orderbooks)
+        orderbooks['timestamp'] = messages['timestamp']
         if multi_days:
             self.order_books = pd.concat([self.order_books, orderbooks], axis=0)
             self.messages = pd.concat([self.messages, messages], axis=0)

@@ -13,7 +13,6 @@ from gym.utils import (
 )
 from agents.baseline_agents import FixedActionAgent
 from database.HistoricalDatabase import HistoricalDatabase
-from orderbook.helpers import *
 
 
 from utils.utils import read_data, split_dates
@@ -32,23 +31,19 @@ if __name__ == '__main__':
     date = datetime(2012, 6, 21)
 
     all_messages, all_books = read_data(ticker)
-    mid_price = (all_books['ask_price_1']+all_books['bid_price_1'])/2
-    mid_price_res = mid_price.resample('1s').last().ffill()
-    (mid_price.pct_change().dropna().rolling('30min').std()**0.5).plot()
     dates = split_dates(split=0.75, date=date, hour_start=10, hour_end=10.10, step_in_sec=step_in_sec)
 
-    all_books[[col for col in all_books.columns if col.find('price') != -1]].describe()
 
     db = HistoricalDatabase()
     simulator = OrderbookSimulator()
 
     start_of_episode = db.get_next_snapshot(datetime(2012, 6, 21, 9, 30), ticker).name
-    end_of_episode = start_of_episode + timedelta(seconds=0.1)
+    start_of_episode += timedelta(microseconds=10 ** 6 - start_of_episode.microsecond)
+    end_of_episode = start_of_episode + timedelta(seconds=5)
     simulator.reset_episode(start_of_episode)
     expected_book = db.get_last_snapshot(start_of_episode, ticker).to_dict()
     actual_book = convert_to_lobster_format(simulator.exchange.central_orderbook)
-    #visualise_orderbook(simulator.exchange.central_orderbook, tick_size=0.01)
-    print(expected_book==actual_book)
+    assert(expected_book==actual_book)
 
     time_1 = start_of_episode + timedelta(seconds=1)
     simulator.forward_step(time_1)
@@ -57,13 +52,11 @@ if __name__ == '__main__':
     keys_to_drop = expected_book.keys() - actual_book.keys()
     for key in keys_to_drop:
         expected_book.pop(key)
-    print(expected_book == actual_book)
+    assert (expected_book == actual_book)
 
     from typing import cast
     from orderbook.create_order import create_order
     from orderbook.models import OrderDict
-
-    simulator.reset_episode(start_of_episode)
     min_buy_price_0 = simulator.min_buy_price
     orderbook = simulator.exchange.central_orderbook
     worst_buy_price = min(orderbook.buy.keys())

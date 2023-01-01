@@ -10,7 +10,7 @@ def add_env_args(parser, dates, step_size):
     parser.add_argument("-ic", "--initial_cash", default=0, help="Initial portfolio.", type=float)
     parser.add_argument("-ii", "--initial_inventory", default=0, help="Initial inventory.", type=float)
     parser.add_argument("-ig", "--initial_gain", default=0, help="Initial gain.", type=float)
-    parser.add_argument("-mi", "--max_inventory", default=1000, help="Maximum (absolute) inventory.", type=int)
+    parser.add_argument("-mi", "--max_inventory", default=10000, help="Maximum (absolute) inventory.", type=int)
     parser.add_argument("-ia", "--inventory_aversion", default=0.1, help="Inventory aversion.", type=float)
     parser.add_argument("-n", "--normalisation_on", default=True, help="Normalise features.", type=boolean_string)
 
@@ -33,7 +33,7 @@ def add_env_args(parser, dates, step_size):
     parser.add_argument(
         "-psr",
         "--per_step_reward_function",
-        default="AD",
+        default="PnL",
         choices=["PnL", "AD", "SD"],
         help="Per step reward function: pnl, symm dampened (SD), asymm dampened (AD)",
         type=str,
@@ -42,7 +42,7 @@ def add_env_args(parser, dates, step_size):
     parser.add_argument(
         "-mofi",
         "--market_order_fraction_of_inventory",
-        default=0.1,
+        default=0.001,
         help="Market order fraction of inventory.",
         type=float,
     )

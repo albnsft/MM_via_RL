@@ -1,15 +1,15 @@
 import abc
 import numpy as np
 from gym.HistoricalOrderbookEnvironment import HistoricalOrderbookEnvironment
-from gym.utils import plot_per_episode, plot_final
 from collections import deque
+import pandas as pd
 from pylab import plt, mpl
 from copy import deepcopy
-import time
 
 plt.style.use('seaborn')
 mpl.rcParams['savefig.dpi'] = 300
 mpl.rcParams['font.family'] = 'serif'
+
 
 
 class ActionSpace:
@@ -62,7 +62,6 @@ class Agent(metaclass=abc.ABCMeta):
 
         else:
             self.episodes = 1
-        np.random.seed(42)
 
     @property
     def actions(self) -> list:
@@ -105,13 +104,12 @@ class Agent(metaclass=abc.ABCMeta):
         done_info['aum'].append(info.aum)
         bar = len(info.inventories)
         done_info['depth'].append(bar)
-        #templ = pd.DataFrame(columns=['episode', 'bar', 'nd pnl', 'map', 'aum', 'success'])
         templ = '\nepisode: {:2d}/{} | bar: {:2d}/{}\n'
         templ += 'normalised pnl: {:5.2f} | mean abs position: {:5.2f}\n'
         templ += 'asset under management: {:5.2f} | success: {} \n'
         if done_info is self.done_info:
-            success = True if bar == round(self.len_learn)-1 else False
-            print(templ.format(episode, self.episodes, bar, round(self.len_learn)-1, info.nd_pnl, info.map, info.aum, success))
+            success = True if bar == round(self.len_learn) else False
+            print(templ.format(episode, self.episodes, bar, round(self.len_learn), info.nd_pnl, info.map, info.aum, success))
         else:
             success = True if bar == round(self.len_val) else False
             print(templ.format(episode, self.episodes, bar, round(self.len_val), info.nd_pnl, info.map, info.aum, success))
@@ -121,7 +119,6 @@ class Agent(metaclass=abc.ABCMeta):
         pass
 
     def learn(self, save: bool = False):
-        start = time.time()
         for episode in range(1, self.episodes + 1):
             print(50 * '*')
             print(f'           Training of {self.get_name()}      ')
@@ -137,14 +134,10 @@ class Agent(metaclass=abc.ABCMeta):
             self._validate(episode)
             if self.learning_agent and len(self.memory) > self.batch_size:
                 self._replay()
-            plot_per_episode(self.learn_env.ticker, self.get_name(),
-                             self.learn_env.step_size, self.learn_env.market_order_fraction_of_inventory,
-                             self.learn_env.per_step_reward_function_midprice, self.step_info_per_episode,
-                             self.step_info_per_eval_episode, episode, self.done_info, self.done_info_eval)
-        if self.episodes > 1: plot_final(self.done_info, self.done_info_eval, self.learn_env.ticker, self.get_name(),
-                         self.learn_env.step_size, self.learn_env.market_order_fraction_of_inventory,
-                         self.learn_env.per_step_reward_function_midprice)
-        print(f'Time elapsed: {round((time.time() - start) / 3600, 3)} hours')
+            self.graph_per_episode('pnls', episode)
+            self.graph_per_episode('inventories', episode)
+            self.info_reward(episode)
+            self.graph_final('map') #'nd_pnl', 'map', 'aum', 'depth'
         if save: self.set_args()
 
     def _validate(self, episode: int):
@@ -163,3 +156,32 @@ class Agent(metaclass=abc.ABCMeta):
                 self.step_info_per_eval_episode[episode] = self.valid_env.info_calculator
                 self._compute_done(self.step_info_per_eval_episode, episode, self.done_info_eval)
                 break
+
+    def graph_per_episode(self, metric: str=None, episode: int=None):
+        train_metric = self.step_info_per_episode[episode].__dict__[metric]
+        val_metric = self.step_info_per_eval_episode[episode].__dict__[metric]
+        metrics = pd.DataFrame([train_metric, val_metric], index=['training','validation']).T
+        metrics.plot(ylabel=metric, xlabel='n-th bar reaches', title=f'{metric} through time for episode {episode}')
+
+    def info_reward(self, episode):
+        train_reward = np.diff(self.step_info_per_episode[episode].__dict__['pnls'])
+        val_reward = np.diff(self.step_info_per_eval_episode[episode].__dict__['pnls'])
+        rewards = pd.DataFrame([train_reward, val_reward], index=['training','validation']).T
+        stats = pd.DataFrame(rewards).describe()
+        stats = np.round(stats)
+        stats = stats.astype(int)
+        rewards.plot.hist(title='Rewards histogram')
+        rewards.rolling(100).mean().plot()
+        rewards.rolling(100).std().plot()
+
+    def graph_final(self, metric: str ):
+        metrics = pd.DataFrame([self.done_info[metric], self.done_info_eval[metric]], index=['training','validation']).T
+        metrics.plot(ylabel=metric, xlabel='n-th episodes', title=f'{metric} through episodes')
+
+
+
+
+
+
+
+
