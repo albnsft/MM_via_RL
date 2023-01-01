@@ -56,7 +56,7 @@ class HistoricalOrderbookEnvironment:
             normalisation_on: bool = True,
             n_levels: int = 5,
             n_lags_feature: int = 0,
-            verbose: bool = True
+            verbose: bool = False
     ):
         super(HistoricalOrderbookEnvironment, self).__init__()
 
@@ -76,16 +76,18 @@ class HistoricalOrderbookEnvironment:
         self.pricer = lambda orderbook: orderbook.midprice
         self._check_params()
         self.max_inventory = max_inventory
+        self.verbose = verbose
         self.features = features or self.get_default_features(step_size, normalisation_on)
         self.max_feature_window_size = max([feature.window_size for feature in self.features])
         self.simulator = simulator or OrderbookSimulator(
             ticker=ticker,
             n_levels=self.n_levels,
+            verbose=verbose
         )
         self.state: State = self._get_default_state()
         self.date_threshold: datetime = self.start_of_trading + (self.end_of_trading - self.start_of_trading) * 1
 
-    def reset(self):
+    def reset(self) -> np.ndarray:
         now_is = self.start_of_trading
         self.simulator.reset_episode(start_date=now_is)
         price = self.pricer(self.central_orderbook)
@@ -144,9 +146,11 @@ class HistoricalOrderbookEnvironment:
                 self.state.portfolio.inventory) > self.max_inventory:  # cancel all orders
             orders = self._get_inventory_clearing_market_order()
             vol = sum(order.volume for order in orders)
-            print(f'{orders[0].timestamp} Market order clearing: {orders[0].direction} for a volume of {vol}')
-            self.state.buy_action = None
-            self.state.sell_action = None
+            if self.verbose:
+                print(f'{self.state.portfolio.inventory} current inventory')
+                print(f'{orders[0].timestamp} Market order clearing: {orders[0].direction} for a volume of {vol}')
+            self.state.buy_parameter = 0
+            self.state.sell_parameter = 0
         else:
             orders = self._get_limit_orders(prices, self.order_distributor.volume)
             self.state.buy_parameter = tetha_buy
@@ -240,7 +244,7 @@ class HistoricalOrderbookEnvironment:
 
     @staticmethod
     def get_default_features(step_size: timedelta, normalisation_on: bool = False):
-        assert step_size <= timedelta(seconds=0.1), "Default features require a minimum step size of 0.1 seconds."
+        if step_size > timedelta(seconds=0.1): step_size = timedelta(seconds=0.1)
         return [
             Spread(
                 update_frequency=step_size,
@@ -256,31 +260,31 @@ class HistoricalOrderbookEnvironment:
                 normalisation_on=normalisation_on,
             ),
             PriceMove(
-                name="price_move_10_s",
+                name="price_move_1_s",
                 update_frequency=step_size,
                 lookback_periods=10,
                 normalisation_on=normalisation_on,
             ),
             Volatility(
-                name="volatility_60_step",
+                name="volatility_6_s",
                 update_frequency=step_size,
-                lookback_periods=int(60),
+                lookback_periods=60,
                 normalisation_on=normalisation_on,
             ),
             Volatility(
-                name="volatility_120_step",
+                name="volatility_12_s",
                 update_frequency=step_size,
                 lookback_periods=int(2 * 60),
                 normalisation_on=normalisation_on,
             ),
             RSI(
-                name="rsi_60_step",
+                name="rsi_6_s",
                 update_frequency=step_size,
                 lookback_periods=int(60),
                 normalisation_on=normalisation_on,
             ),
             RSI(
-                name="rsi_120_step",
+                name="rsi_12_s",
                 update_frequency=step_size,
                 lookback_periods=int(2 * 60),
                 normalisation_on=normalisation_on,

@@ -3,6 +3,7 @@ import abc
 import numpy as np
 import pandas as pd
 from numpy import ndarray
+from copy import deepcopy
 
 from features.Features import State
 from rewards.RewardFunctions import RewardFunction
@@ -23,11 +24,12 @@ class InfoCalculator(_InfoCalculator):
         self.spreads = []
         self.inventories = []
         self.pnls, self.pnl = [], 0
-        #self.filled_order = []
-        #self.info = []
+        self.actions = {'tetha buy': [], 'tetha sell': []}
+        self.filled_actions = deepcopy(self.actions)
         self.aum = 0
         self.nd_pnl = 0
         self.map = 0
+        self.dates = []
 
     def calculate(self, internal_state: State, reward_relative_midprice: RewardFunction) -> pd.DataFrame:
         self._update_args(reward_relative_midprice)
@@ -49,6 +51,9 @@ class InfoCalculator(_InfoCalculator):
         self.spreads.append(internal_state.orderbook.spread)
         self.inventories.append(internal_state.portfolio.inventory)
         self.pnls.append(self.pnl)
+        self.dates.append(internal_state.now_is)
+        self.actions['tetha buy'].append(internal_state.buy_parameter)
+        self.actions['tetha sell'].append(internal_state.sell_parameter)
 
     def _update_metrics(self, internal_state: State):
         self.nd_pnl = self.calculate_nd_pnl()
@@ -63,7 +68,18 @@ class InfoCalculator(_InfoCalculator):
         filled = pd.DataFrame(np.zeros((4, 1)), index=index, columns=["agent's filled orders"])
         for order in internal_state.filled_orders.internal:
             filled.loc[order.direction] = np.array([order.price, order.volume]).reshape(-1, 1)
-        #self.filled_order.append(filled)
+        if internal_state.buy_parameter == 0 and internal_state.sell_parameter == 0:
+            self.filled_actions['tetha buy'].append(internal_state.buy_parameter)
+            self.filled_actions['tetha sell'].append(internal_state.sell_parameter)
+        elif np.any(filled.loc["buy"]!=0) and np.any(filled.loc["sell"]!=0):
+            self.filled_actions['tetha buy'].append(internal_state.buy_parameter)
+            self.filled_actions['tetha sell'].append(internal_state.sell_parameter)
+        elif np.any(filled.loc["buy"]!=0) and np.any(filled.loc["sell"]==0):
+            self.filled_actions['tetha buy'].append(internal_state.buy_parameter)
+            self.filled_actions['tetha sell'].append(-1)
+        elif np.any(filled.loc["buy"]==0) and np.any(filled.loc["sell"]!=0):
+            self.filled_actions['tetha buy'].append(-1)
+            self.filled_actions['tetha sell'].append(internal_state.sell_parameter)
         return filled
 
     def _compute_info(self, internal_state: State) -> pd.DataFrame:
@@ -77,10 +93,9 @@ class InfoCalculator(_InfoCalculator):
             normalised_pnl=self.nd_pnl,
             inventory=self.inventories[-1],
             inventory_ma=self.map,
-            aum=self.aum, #pnl
+            aum=self.aum,
         )
         info = pd.DataFrame([info_dict], index=[internal_state.now_is])
-        #self.info.append(info)
         return info
 
     def calculate_aum(self, internal_state: State) -> float:
