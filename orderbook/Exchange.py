@@ -40,7 +40,6 @@ class Exchange:
     ticker: str = "MSFT"
     central_orderbook: Orderbook = None  # type: ignore
     internal_orderbook: Orderbook = None  # type: ignore
-    tick_size: int = 100
     n_levels: int = 5
 
     def __post_init__(self):
@@ -148,7 +147,7 @@ class Exchange:
         return None
 
     def get_empty_orderbook(self):
-        return Orderbook(buy=SortedDict(), sell=SortedDict(), ticker=self.ticker, tick_size=self.tick_size)
+        return Orderbook(buy=SortedDict(), sell=SortedDict(), ticker=self.ticker)
 
     @property
     def best_sell_price(self):
