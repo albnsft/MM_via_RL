@@ -106,6 +106,7 @@ class Exchange:
             if executed_order.is_external:
                 executed_external_orders.append(executed_order)
             else:
+                #print(f'Counterparty of next executed internal order \n {order}')
                 executed_internal_orders.append(executed_order)
             remaining_volume -= volume_to_execute
             if not order.is_external:

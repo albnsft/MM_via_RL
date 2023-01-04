@@ -15,7 +15,8 @@ class RewardFunction(metaclass=abc.ABCMeta):
 
 class PnL(RewardFunction):
     def calculate(self, current_state: State, next_state: State) -> float:
-        return next_state.portfolio.gain + next_state.portfolio.inventory*(next_state.price - current_state.price)
+        return next_state.portfolio.gain + next_state.portfolio.inventory *\
+               (next_state.price - current_state.price)
 
     def reset(self):
         pass
@@ -32,6 +33,11 @@ class InventoryAdjustedPnL(RewardFunction):
         dampened_inventory_term = self.inventory_aversion * next_state.portfolio.inventory * delta_midprice
         if self.asymmetrically_dampened:
             dampened_inventory_term = max(0, dampened_inventory_term)
+        """
+        pnl = self.pnl.calculate(current_state, next_state) - dampened_inventory_term
+        print({'next_date': next_state.now_is, 'inventory': next_state.portfolio.inventory, 'delta_midprice':delta_midprice, 'pnl':pnl})
+        print('*'*50)
+        """
         return self.pnl.calculate(current_state, next_state) - dampened_inventory_term
 
     def reset(self):

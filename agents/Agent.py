@@ -63,6 +63,9 @@ class Agent(metaclass=abc.ABCMeta):
         else:
             self.episodes = 1
         np.random.seed(42)
+        if self.learn_env.max_inventory > 10000:
+            self.learn_env.market_order_fraction_of_inventory = 0  # no market order clearing
+            self.learn_env.market_order_clearing = False
 
     @property
     def actions(self) -> list:
@@ -110,9 +113,11 @@ class Agent(metaclass=abc.ABCMeta):
         templ += 'normalised pnl: {:5.2f} | mean abs position: {:5.2f}\n'
         templ += 'asset under management: {:5.2f} | success: {} \n'
         if done_info is self.done_info:
-            success = True if bar == round(self.len_learn)-1 else False
-            print(templ.format(episode, self.episodes, bar, round(self.len_learn)-1, info.nd_pnl, info.map, info.aum, success))
+            if bar > round(self.len_learn): bar = round(self.len_learn)
+            success = True if bar == round(self.len_learn) else False
+            print(templ.format(episode, self.episodes, bar, round(self.len_learn), info.nd_pnl, info.map, info.aum, success))
         else:
+            if bar > round(self.len_val): bar = round(self.len_val)
             success = True if bar == round(self.len_val) else False
             print(templ.format(episode, self.episodes, bar, round(self.len_val), info.nd_pnl, info.map, info.aum, success))
         print(50 * '*')

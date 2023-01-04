@@ -187,9 +187,7 @@ class HistoricalOrderbookEnvironment:
     def _update_portfolio(self, filled_orders: FilledOrders):
         self.state.portfolio.gain = 0
         for order in filled_orders.internal:
-            if order.price is None:
-                raise Exception("Cannot update portfolio from a market order with no fill price.")
-            elif order.direction == "sell":
+            if order.direction == "sell":
                 self.state.portfolio.inventory -= order.volume
                 self.state.portfolio.cash += order.volume * order.price
                 self.state.portfolio.gain += order.volume * (order.price - self.state.price)
@@ -197,6 +195,16 @@ class HistoricalOrderbookEnvironment:
                 self.state.portfolio.inventory += order.volume
                 self.state.portfolio.cash -= order.volume * order.price
                 self.state.portfolio.gain += order.volume * (self.state.price - order.price)
+        """
+        from orderbook.models import LimitOrder, MarketOrder
+        if len(filled_orders.internal)>0:
+            print('*' * 50)
+            dir = [order.direction for order in filled_orders.internal]
+            print('Executed internal limit orders')
+            print(dir)
+            if isinstance(filled_orders.internal[0], LimitOrder): print(f'{filled_orders.internal[0].timestamp} gain for limit orders: {self.state.portfolio.gain}')
+            if isinstance(filled_orders.internal[0], MarketOrder): print(f'{filled_orders.internal[0].timestamp} gain for market orders: {self.state.portfolio.gain}')
+        """
 
     @property
     def central_orderbook(self):

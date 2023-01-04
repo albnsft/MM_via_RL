@@ -115,10 +115,10 @@ def plot_per_episode(
 
     def info_factions(step_info_per_episode, step_info_per_eval_episode):
         actions_train = pd.DataFrame.from_dict(step_info_per_episode.__dict__['filled_actions'], orient='index').T
-        factions_train = actions_train[actions_train!=-1].dropna()
+        factions_train = actions_train[actions_train!=-1][actions_train!=0].dropna()
         factions_train_ = actions_train[(actions_train == -1).sum(axis=1).astype('bool')]
         actions_test = pd.DataFrame.from_dict(step_info_per_eval_episode.__dict__['filled_actions'], orient='index').T
-        factions_test = actions_test[actions_test!=-1].dropna()
+        factions_test = actions_test[actions_test!=-1][actions_test!=0].dropna()
         factions_test_ = actions_test[(actions_test == -1).sum(axis=1).astype('bool')]
         return factions_train.value_counts(), factions_train_.value_counts(), factions_test.value_counts(), factions_test_.value_counts()
 
@@ -142,7 +142,7 @@ def plot_per_episode(
                                                  np.mean(np.absolute(l_nd_pnl - np.mean(l_nd_pnl)))]
         uncertainties['Mean Absolute Position'] = [np.mean(l_map), np.std(l_map),
                                                    np.mean(np.absolute(l_map - np.mean(l_map)))]
-        return np.round(uncertainties.T, 1)
+        return np.round(uncertainties, 1)
 
     def done_inf(dct):
         return np.round(pd.DataFrame.from_dict(dct, orient='index').T, 1)
@@ -202,11 +202,11 @@ def plot_per_episode(
 
     equity_curve = graph_per_episode(step_info_per_episode, step_info_per_eval_episode, 'pnls')
     equity_curve.plot(ax=ax_dict["A"], ylabel='aum', xlabel='n-th bar reaches',
-                      title=f'Equity curve through time for episode {episode}')
+                      title=f'Equity curve through time')
 
     inventory_curve = graph_per_episode(step_info_per_episode, step_info_per_eval_episode, 'inventories')
     inventory_curve.plot(ax=ax_dict["B"], ylabel='inventory', xlabel='n-th bar reaches',
-                         title=f'Inventory curve through time for episode {episode}')
+                         title=f'Inventory curve through time')
 
     window = '30min'
     stats_rewards, rewards, rewards_roll_mean, rewards_roll_std = info_reward(step_info_per_episode,
@@ -243,8 +243,9 @@ def plot_per_episode(
     actions_2filled = pd.concat([actions_f2train, actions_f2test], axis=1).sort_values(by='Training')
     actions_1filled = pd.concat([actions_f1train, actions_f1test], axis=1).sort_values(by='Training')
 
-    actions.plot.barh(ax=ax_dict["G"], title = "Count agent's parameter actions (bid, sell)")
+    actions.plot.barh(ax=ax_dict["G"], title="Count agent's parameter actions (bid, sell)")
 
+    actions = actions.iloc[:-1] #delete market orders to count the pct of filled order, indeed market orders are always filled
     not_filled = (actions.sum().values - actions_2filled.sum().values - actions_1filled.sum().values) / actions.sum().values
     not_filled = np.round(pd.DataFrame(not_filled*100, index=['Training', 'Testing'], columns=['Not filled actions (%)']).T, 1)
     #not_filled.plot.barh(ax=ax_dict["P"], title = "Not filled actions in units")
@@ -258,8 +259,8 @@ def plot_per_episode(
     ax_dict["P"].set_axis_off()
     ax_dict["P"].title.set_text("Agent's actions not filled in %")
 
-    actions_2filled.plot.barh(ax=ax_dict["H"], title = "Count agent's actions filled both side (bid, sell)")
-    actions_1filled.plot.barh(ax=ax_dict["Q"], title =  "Count agent's actions filled one side (bid, sell)")
+    actions_2filled.plot.barh(ax=ax_dict["H"], title="Count agent's actions filled both side (bid, sell)")
+    actions_1filled.plot.barh(ax=ax_dict["Q"], title="Count agent's actions filled one side (bid, sell)")
 
     window = '30min'
     uncertainties_train = uncertainties_pnl_map(step_info_per_episode, window)

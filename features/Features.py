@@ -432,6 +432,6 @@ class BuyDistance(Feature):
         if state.buy_parameter:
             spread = state.orderbook.spread
             mid_price = state.price
-            self.current_value = mid_price + state.buy_parameter * spread
+            self.current_value = mid_price - state.buy_parameter * spread
         else:
             self.current_value = 0

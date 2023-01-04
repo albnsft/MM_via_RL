@@ -34,6 +34,7 @@ if __name__ == '__main__':
     all_messages, all_books = read_data(ticker)
     mid_price = (all_books['ask_price_1']+all_books['bid_price_1'])/2
     mid_price_res = mid_price.resample('1s').last().ffill()
+    count_nonnulldiff_mid_price = len(mid_price)-np.sum(np.diff(mid_price)==0)
     (mid_price.pct_change().dropna().rolling('30min').std()**0.5).plot()
     dates = split_dates(split=0.75, date=date, hour_start=10, hour_end=10.10, step_in_sec=step_in_sec)
 

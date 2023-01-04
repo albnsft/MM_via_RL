@@ -21,12 +21,14 @@ if __name__ == '__main__':
 
     args = vars(parser.parse_args())
 
+    """
     for i in range(9):
         train_env_config, eval_env_config = get_env_configs(args)
         train_env = env_creator(train_env_config)
         eval_env = env_creator(eval_env_config)
         agent = FixedActionAgent(i, train_env, eval_env)
         agent.learn()
+    """
 
     train_env_config, eval_env_config = get_env_configs(args)
     train_env = env_creator(train_env_config)
