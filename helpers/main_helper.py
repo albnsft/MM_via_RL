@@ -4,7 +4,7 @@ from utils.utils import boolean_string
 from datetime import datetime
 
 
-def add_env_args(parser, dates, step_size):
+def add_env_args(parser, dates, step_size, lags):
     parser.add_argument("-sz", "--step_size", default=step_size, help="Step size in seconds.", type=float)
     parser.add_argument("-t", "--ticker", default="MSFT", help="Specify stock ticker.", type=str)
     parser.add_argument("-ic", "--initial_cash", default=0, help="Initial portfolio.", type=float)
@@ -22,7 +22,7 @@ def add_env_args(parser, dates, step_size):
         help="Agent state, market state or full state.",
         type=str,
     )
-    parser.add_argument("-nlf", "--n_lags_feature", default=0, help="Number of lags feature", type=int)
+    parser.add_argument("-nlf", "--n_lags_feature", default=lags, help="Number of lags per feature", type=int)
 
     parser.add_argument("-starttrain", "--start_trading_train", default=dates[0], help="Start trading train.", type=datetime)
     parser.add_argument("-endtrain", "--end_trading_train", default=dates[1], help="End trading train.", type=datetime)

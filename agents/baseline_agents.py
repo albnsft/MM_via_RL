@@ -1,9 +1,15 @@
 import abc
 
 import numpy as np
+import random
 
 from agents.Agent import Agent
 from gym.HistoricalOrderbookEnvironment import HistoricalOrderbookEnvironment
+
+from agents.baseline_nets import Net
+from agents.Nets import Params, LSTM, DNN
+
+from torchsummary import summary
 
 
 class RandomAgent(Agent):
@@ -82,18 +88,115 @@ class ConsolidateAgent(Agent):
         return "ConsolidatedAgent"
 
 
-class BaseDQN(Agent, metaclass=abc.ABCMeta):
+class BaseDQN(Agent):
     def __init__(
             self,
             learn_env: HistoricalOrderbookEnvironment = None,
-            valid_env: HistoricalOrderbookEnvironment = None, ):
+            valid_env: HistoricalOrderbookEnvironment = None,
+    ):
+        super().__init__(learn_env, valid_env, True)
+
+    @abc.abstractmethod
+    def _compute_fit(self, state: np.ndarray, target):
+        pass
+
+    @abc.abstractmethod
+    def _compute_prediction(self, state: np.ndarray, item: bool):
+        pass
+
+    def get_action(self, state: np.ndarray) -> np.ndarray[int]:
+        """
+        optimal policy is defined trivially as: when the agent is in state s, it will select the action with the highest
+        value for that state
+        """
+        return self._compute_prediction(state, item=True)
+
+    def replay(self):
+        """
+        Method to retrain the DQN model based on batches of memorized experiences.
+        Replay to update the policy function Q regularly, improve the learning considerably.
+        """
+        batch = random.sample(self.memory, self.batch_size)
+        for state, action, reward, next_state, done in batch:
+            if not done:
+                reward += self.gamma * np.amax(self._compute_prediction(next_state, item=False)[0].numpy())
+            target = self._compute_prediction(state, item=False)
+            """
+            approximate Q-Value(target) should be close to the reward the agent gets after playing action a in state s
+            plus the future discounted value of playing optimally from then on
+            """
+            target[0, action] = reward
+            #The loss to be minimized is the MSE between the estimated Q-Value and the target
+            self._compute_fit(state, target)
+
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
+
+
+class LstmAgent(BaseDQN):
+    def __init__(
+            self,
+            learn_env: HistoricalOrderbookEnvironment = None,
+            valid_env: HistoricalOrderbookEnvironment = None,
+            hidden_dim: int = 32,
+            n_hidden: int = 1,
+            lr: float = 0.01,
+            dropout: float = 0.2
+
+    ):
         super().__init__(learn_env, valid_env)
+        self._set_model(hidden_dim, n_hidden, lr, dropout)
 
-    @abc.abstractmethod
-    def _set_model(self, hypermodel) -> None:
-        pass
+    def get_name(self):
+        return "LstmAgent"
 
-    @abc.abstractmethod
-    def _compute_fit(self, state: np.ndarray, target: np.ndarray) -> None:
-        pass
+    def _set_model(self, hidden_dim: int, n_hidden: int, lr: float, dropout: float):
+        if n_hidden == 0: dropout = 0
+        params = Params(input_dim=len(self.learn_env.features), hidden_dim=hidden_dim, n_hidden=n_hidden, dropout=dropout)
+        self.model = Net(LSTM(params), lr=lr, name=self.get_name())
+        summary(self.model.model, (self.learn_env.n_lags_feature, len(self.learn_env.features)))
+
+    def _compute_fit(self, state: np.ndarray, target):
+        self.model.fit(state, target)
+
+    def _compute_prediction(self, state: np.ndarray, item: bool):
+        return self.model.predict(state, item=item)
+
+
+class DnnAgent(BaseDQN):
+    def __init__(
+            self,
+            learn_env: HistoricalOrderbookEnvironment = None,
+            valid_env: HistoricalOrderbookEnvironment = None,
+            hidden_dim: int = 32,
+            n_hidden: int = 1,
+            lr: float = 0.001,
+            dropout: float = 0.2
+
+    ):
+        super().__init__(learn_env, valid_env)
+        self._set_model(hidden_dim, n_hidden, lr, dropout)
+
+    def get_name(self):
+        return "DnnAgent"
+
+    def _set_model(self, hidden_dim: int, n_hidden: int, lr: float, dropout: float):
+        if n_hidden == 0: dropout = 0
+        assert (self.learn_env.n_lags_feature==0)
+        params = Params(input_dim=len(self.learn_env.features), hidden_dim=hidden_dim, n_hidden=n_hidden, dropout=dropout)
+        self.model = Net(DNN(params), lr=lr, name=self.get_name())
+        summary(self.model.model, (1, len(self.learn_env.features)))
+
+    def _compute_fit(self, state: np.ndarray, target):
+        self.model.fit(state, target)
+
+    def _compute_prediction(self, state: np.ndarray, item: bool):
+        return self.model.predict(state, item=item)
+
+
+
+
+
+
+
 

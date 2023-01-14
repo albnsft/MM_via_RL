@@ -51,7 +51,12 @@ class Agent(metaclass=abc.ABCMeta):
         self.len_learn = None
         self.len_val = None
 
-    def _set_learning_args(self, epsilon, epsilon_min, epsilon_decay, gamma, batch_size):
+    @staticmethod
+    def _set_seed(s: int = 42):
+        np.random.seed(s)
+
+    def _set_learning_args(self, epsilon: float, epsilon_min: float, epsilon_decay: float, gamma: float, batch_size: int):
+        self._set_seed()
         if self.learning_agent:
             self.epsilon = epsilon  # Initial exploration rate
             self.epsilon_min = epsilon_min  # Minimum exploration rate
@@ -62,7 +67,6 @@ class Agent(metaclass=abc.ABCMeta):
 
         else:
             self.episodes = 1
-        np.random.seed(42)
         if self.learn_env.max_inventory > 10000:
             self.learn_env.market_order_fraction_of_inventory = 0  # no market order clearing
             self.learn_env.market_order_clearing = False
@@ -108,7 +112,6 @@ class Agent(metaclass=abc.ABCMeta):
         done_info['aum'].append(info.aum)
         bar = len(info.inventories)
         done_info['depth'].append(bar)
-        #templ = pd.DataFrame(columns=['episode', 'bar', 'nd pnl', 'map', 'aum', 'success'])
         templ = '\nepisode: {:2d}/{} | bar: {:2d}/{}\n'
         templ += 'normalised pnl: {:5.2f} | mean abs position: {:5.2f}\n'
         templ += 'asset under management: {:5.2f} | success: {} \n'
@@ -122,7 +125,8 @@ class Agent(metaclass=abc.ABCMeta):
             print(templ.format(episode, self.episodes, bar, round(self.len_val), info.nd_pnl, info.map, info.aum, success))
         print(50 * '*')
 
-    def _replay(self):
+    @abc.abstractmethod
+    def replay(self):
         pass
 
     def learn(self, save: bool = False):
@@ -131,6 +135,7 @@ class Agent(metaclass=abc.ABCMeta):
             print(50 * '*')
             print(f'           Training of {self.get_name()}      ')
             state = self.learn_env.reset()
+            #action = self.get_action(state)
             print(f'    Start of trading: {self.learn_env.state.now_is} ')
             self.len_learn = (self.learn_env.end_of_trading - self.learn_env.state.now_is) / self.learn_env.step_size
             while self.learn_env.end_of_trading >= self.learn_env.state.now_is:
@@ -141,7 +146,7 @@ class Agent(metaclass=abc.ABCMeta):
                     break
             self._validate(episode)
             if self.learning_agent and len(self.memory) > self.batch_size:
-                self._replay()
+                self.replay()
             plot_per_episode(self.learn_env.ticker, self.get_name(),
                              self.learn_env.step_size, self.learn_env.market_order_fraction_of_inventory,
                              self.learn_env.per_step_reward_function_midprice, self.step_info_per_episode,
@@ -155,6 +160,7 @@ class Agent(metaclass=abc.ABCMeta):
     def _validate(self, episode: int):
         """
         Method to validate the performance of the DQL agent.
+        only relies on the exploitation of the currently optimal policy
         """
         print(50 * '*')
         print(f'          Validation of {self.get_name()}      ')
@@ -162,7 +168,7 @@ class Agent(metaclass=abc.ABCMeta):
         print(f'    Start of trading: {self.learn_env.state.now_is} ')
         self.len_val = (self.valid_env.end_of_trading - self.valid_env.state.now_is) / self.valid_env.step_size
         while self.valid_env.end_of_trading >= self.valid_env.state.now_is:
-            action = self._greedy_policy(state) if self.learning_agent else self.get_action(state)
+            action = self.get_action(state)
             state, reward, done, info = self.valid_env.step(action)
             if done:
                 self.step_info_per_eval_episode[episode] = self.valid_env.info_calculator

@@ -6,7 +6,7 @@ from datetime import datetime, time, timedelta, date
 
 import numpy as np
 from scipy import stats
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import abc
 
 from orderbook.models import Orderbook, FilledOrders
@@ -71,7 +71,7 @@ class Feature(metaclass=abc.ABCMeta):
             # TODO: tidy this
             self.history.append(value + 1e-06)
         self.history.append(value)
-        return stats.zscore(self.history)[-1]#MinMaxScaler().fit_transform(np.array(self.history).reshape(-1,1)).squeeze()[-1]
+        return stats.zscore(self.history)[-1] #StandardScaler().fit_transform(np.array(self.history).reshape(-1, 1)).squeeze()[-1]
 
     @abc.abstractmethod
     def reset(self, state: State, first_usage_time: Optional[datetime] = None):

@@ -55,7 +55,7 @@ class HistoricalOrderbookEnvironment:
             order_distributor: OrderDistributor = None,
             normalisation_on: bool = True,
             n_levels: int = 5,
-            n_lags_feature: int = 0,
+            n_lags_feature: int = 10,
             verbose: bool = False
     ):
         super(HistoricalOrderbookEnvironment, self).__init__()
@@ -88,7 +88,7 @@ class HistoricalOrderbookEnvironment:
         self.date_threshold: datetime = self.start_of_trading + (self.end_of_trading - self.start_of_trading) * 1
 
     def reset(self) -> np.ndarray:
-        now_is = self.start_of_trading
+        now_is = self.start_of_trading - (self.max_feature_window_size + self.step_size * self.n_lags_feature)
         self.simulator.reset_episode(start_date=now_is)
         price = self.pricer(self.central_orderbook)
         self.state = State(FilledOrders(), self.central_orderbook, price, self.initial_portfolio, now_is, None, None)
@@ -252,7 +252,6 @@ class HistoricalOrderbookEnvironment:
 
     @staticmethod
     def get_default_features(step_size: timedelta, normalisation_on: bool = False):
-        if step_size > timedelta(seconds=0.1): step_size = timedelta(seconds=0.1)
         return [
             Spread(
                 update_frequency=step_size,
@@ -262,37 +261,37 @@ class HistoricalOrderbookEnvironment:
                           normalisation_on=normalisation_on
                           ),
             PriceMove(
-                name="price_move_0.1_s",
+                name="price_move_1step",
                 update_frequency=step_size,
                 lookback_periods=1,
                 normalisation_on=normalisation_on,
             ),
             PriceMove(
-                name="price_move_1_s",
+                name="price_move_10step",
                 update_frequency=step_size,
                 lookback_periods=10,
                 normalisation_on=normalisation_on,
             ),
             Volatility(
-                name="volatility_6_s",
+                name="volatility_60step",
                 update_frequency=step_size,
                 lookback_periods=60,
                 normalisation_on=normalisation_on,
             ),
             Volatility(
-                name="volatility_12_s",
+                name="volatility_120step",
                 update_frequency=step_size,
                 lookback_periods=int(2 * 60),
                 normalisation_on=normalisation_on,
             ),
             RSI(
-                name="rsi_6_s",
+                name="rsi_6step",
                 update_frequency=step_size,
                 lookback_periods=int(60),
                 normalisation_on=normalisation_on,
             ),
             RSI(
-                name="rsi_12_s",
+                name="rsi_12step",
                 update_frequency=step_size,
                 lookback_periods=int(2 * 60),
                 normalisation_on=normalisation_on,
