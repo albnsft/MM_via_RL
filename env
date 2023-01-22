@@ -1,5 +1,0 @@
-POSTGRES_HOST="localhost"
-POSTGRES_PORT="5432"
-POSTGRES_DB="limitorderbook"
-POSTGRES_USER="root"
-POSTGRES_PASSWORD="root"

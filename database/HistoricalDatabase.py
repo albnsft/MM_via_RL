@@ -32,7 +32,7 @@ class HistoricalDatabase:
         self.books.set_index(['timestamp'], inplace=True)
         self.messages.set_index(['timestamp'], drop=False, inplace=True)
         self.messages['ticker'] = ticker
-        self.messages['timestamp'] = self.messages['timestamp'].round('U')
+        #self.messages['timestamp'] = self.messages['timestamp'].round('U')
 
     def get_last_snapshot(self, timestamp: datetime, ticker: str) -> pd.DataFrame:
         return self.transform_books(self.books.loc[self.books.index <= timestamp].iloc[-1])
