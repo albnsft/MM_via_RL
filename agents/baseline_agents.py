@@ -6,8 +6,8 @@ import random
 from agents.Agent import Agent
 from gym.HistoricalOrderbookEnvironment import HistoricalOrderbookEnvironment
 
-from agents.baseline_nets import Net
-from agents.Nets import Params, LSTM, DNN
+from agents.value_approximators.baseline_nets import Net
+from agents.value_approximators.Nets import Params, LSTM, DNN
 
 from torchsummary import summary
 
@@ -93,7 +93,7 @@ class BaseDQN(Agent):
             self,
             learn_env: HistoricalOrderbookEnvironment = None,
             valid_env: HistoricalOrderbookEnvironment = None,
-            episodes: int = 1,
+            episodes: int = 100,
             epsilon: float = 0.7,
             epsilon_min: float = 0.0001,
             epsilon_decay: float = 0.98,

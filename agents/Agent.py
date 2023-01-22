@@ -160,8 +160,7 @@ class Agent(metaclass=abc.ABCMeta):
             plot_final(self.done_info, self.done_info_eval, self.learn_env.ticker, self.get_name(),
                        self.learn_env.step_size, self.learn_env.market_order_fraction_of_inventory,
                        self.learn_env.per_step_reward_function_midprice)
-        #print(f'Time elapsed: {round((time.time() - start) / 3600, 3)} hours')
-        print(f'Time elapsed: {round((time.time() - start) / 60, 6)} minutes')
+        print(f'Time elapsed: {round((time.time() - start) / 3600, 3)} hours')
         if save: self.set_args()
 
     def _validate(self, episode: int):
@@ -177,7 +176,6 @@ class Agent(metaclass=abc.ABCMeta):
             action = self.get_action(state)
             state, reward, done, info = self.valid_env.step(action)
             if done:
-                print(self.valid_env.info_calculator.pnls)
                 self.step_info_per_eval_episode[episode] = self.valid_env.info_calculator
                 self._compute_done(self.step_info_per_eval_episode, episode, self.done_info_eval)
                 break
