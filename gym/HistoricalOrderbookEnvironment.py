@@ -58,18 +58,16 @@ class HistoricalOrderbookEnvironment:
             n_lags_feature: int = 10,
             verbose: bool = False
     ):
-        super(HistoricalOrderbookEnvironment, self).__init__()
 
         self.ticker = ticker
         self.step_size = step_size
         self.start_of_trading = start_of_trading
         self.end_of_trading = end_of_trading
-        self.initial_portfolio = initial_portfolio or Portfolio(inventory=0, cash=0, gain=0)
+        self.initial_portfolio = initial_portfolio or self._get_init_ptf()
         self.order_distributor = order_distributor or OrderDistributor()
         self.market_order_clearing = market_order_clearing
         self.market_order_fraction_of_inventory = market_order_fraction_of_inventory
         self.per_step_reward_function_midprice = per_step_reward_function
-        self.terminal_reward_function = per_step_reward_function
         self.n_levels = n_levels
         self.n_lags_feature = n_lags_feature if n_lags_feature==0 else n_lags_feature-1
         self.info_calculator = info_calculator or InfoCalculator(verbose=verbose)
@@ -86,20 +84,23 @@ class HistoricalOrderbookEnvironment:
         )
         self.state: State = self._get_default_state()
         self.date_threshold: datetime = self.start_of_trading + (self.end_of_trading - self.start_of_trading) * 1
+        self.mm_threshold: int = int((self.date_threshold-self.start_of_trading).seconds)
+        #print(f'Mark to market value threshold has been fixed to: {self.mm_threshold}$')
 
     def reset(self) -> np.ndarray:
         now_is = self.start_of_trading - (self.max_feature_window_size + self.step_size * self.n_lags_feature)
         self.simulator.reset_episode(start_date=now_is)
         price = self.pricer(self.central_orderbook)
-        self.state = State(FilledOrders(), self.central_orderbook, price, self.initial_portfolio, now_is, None, None)
+        self.state = State(FilledOrders(), self.central_orderbook, price, self._get_init_ptf(), now_is, None, None)
         self._reset_features(now_is)
+        self.info_calculator.reset_episode()
         if self.n_lags_feature > 0: self.lags_feature = np.zeros((self.n_lags_feature+1, len(self.features)))
         for step in range(int(self.max_feature_window_size / self.step_size) + self.n_lags_feature):
             self._forward(list())
             self._update_features()
             if self.n_lags_feature > 0:
                 self._set_lags_features(step)
-        return self.get_features()
+        return self._get_features() if self.n_lags_feature == 0 else self.lags_feature
 
     def step(self, action: int):
         done = False
@@ -110,8 +111,7 @@ class HistoricalOrderbookEnvironment:
         next_state = self.state
         reward_relative_midprice = self.per_step_reward_function_midprice.calculate(current_state, next_state)
         features = self.get_features()
-        if self.end_of_trading <= next_state.now_is or (self.mark_to_market_value < -1000 and next_state.now_is > self.date_threshold):
-            reward_relative_midprice = self.terminal_reward_function.calculate(current_state, next_state)
+        if self.end_of_trading <= next_state.now_is or (self.mark_to_market_value < -self.mm_threshold and next_state.now_is > self.date_threshold):
             done = True
         info = self.info_calculator.calculate(self.state, reward_relative_midprice)
         return features, reward_relative_midprice, done, info
@@ -130,6 +130,7 @@ class HistoricalOrderbookEnvironment:
         if self.n_lags_feature == 0:
             return self._get_features()
         else:
+            self.lags_feature[:-1] = self.lags_feature[1:]
             self.lags_feature[-1] = self._get_features()
             return self.lags_feature
 
@@ -226,6 +227,10 @@ class HistoricalOrderbookEnvironment:
             self.lags_feature[0] = self._get_features()
         elif step >= int(self.max_feature_window_size / self.step_size):
             self.lags_feature[step - int(self.max_feature_window_size / self.step_size) + 1] = self._get_features()
+
+    @staticmethod
+    def _get_init_ptf():
+        return Portfolio(inventory=0, cash=0, gain=0)
 
     def _get_default_order_dict(self, direction: Literal["buy", "sell"]) -> OrderDict:
         return OrderDict(

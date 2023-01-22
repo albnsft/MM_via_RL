@@ -1,9 +1,6 @@
 import glob
 import logging
-import os
 import ssl
-from contextlib import suppress
-from functools import partial
 from io import BytesIO
 from pathlib import Path
 from typing import Optional, Tuple
@@ -11,20 +8,10 @@ from urllib.request import urlopen
 from zipfile import ZipFile
 
 import pandas as pd
-from sqlalchemy.orm import sessionmaker
-
-from database.PostgresEngine import PostgresEngine
-from database.models import Book
 from orderbook.helpers import get_book_columns
 
 
-def make_temporary_data_path() -> str:
-    with suppress(FileExistsError):
-        os.mkdir("temporary_data")
-    return "temporary_data"
-
-
-def download_lobster_sample_data(ticker: str, trading_date: str, n_levels: int = 10, data_path: str = "data"):
+def download_lobster_sample_data(ticker: str, trading_date: str="2012-06-21", n_levels: int = 5, data_path: str = 'data'):
     logging.info(f"Downloading book and message data for {ticker} on {trading_date} from LOBSTER.")
     zip_url = f"https://lobsterdata.com/info/sample/LOBSTER_SampleFile_{ticker}_{trading_date}_{n_levels}.zip"
     ssl._create_default_https_context = ssl._create_unverified_context  # This is a hack, and not ideal.
@@ -32,14 +19,6 @@ def download_lobster_sample_data(ticker: str, trading_date: str, n_levels: int =
         with ZipFile(BytesIO(zip_resp.read())) as zip_file:
             zip_file.extractall(data_path)
     logging.info(f"Book and message data for {ticker} on {trading_date} successfully downloaded.")
-
-
-def create_tables():
-    engine = PostgresEngine().engine
-    Session = sessionmaker(engine)
-    session = Session()
-    Book.metadata.create_all(engine)
-    session.close()
 
 
 def get_book_snapshots(
@@ -67,35 +46,6 @@ def get_file_len(filename):
         for i, _ in enumerate(f):
             pass
     return i + 1
-
-
-def convert_messages_and_books_to_dicts(
-        messages: pd.DataFrame, books: pd.DataFrame, ticker: str, trading_date: str, n_levels: int, freq: Optional[str]
-):
-    start_index = messages.iloc[0].name
-    message_convertor = partial(
-        get_message_dict_from_series,
-        **{
-            "ticker": ticker,
-            "trading_date": trading_date,
-            "n_levels": n_levels,
-            "start_index": start_index,
-            "freq": freq,
-        },
-    )
-    books_to_internal = partial(
-        get_book_dict_from_series,
-        **{
-            "ticker": ticker,
-            "trading_date": trading_date,
-            "n_levels": n_levels,
-            "start_index": start_index,
-            "freq": freq,
-        },
-    )
-    messages = messages.apply(message_convertor, axis=1).values
-    books = books.apply(books_to_internal, axis=1).values
-    return messages, books
 
 
 def get_book_and_message_columns(n_levels: int = 50):
@@ -158,38 +108,3 @@ def get_external_internal_type_dict():
         6: "cross_trade",
         7: "trading_halt",
     }
-
-
-def generate_internal_index(index: int, ticker: str, trading_date: str, n_levels: int, freq: str):
-    return f"{freq}_L{str(n_levels).zfill(3)}_{EXCHANGE}_{ticker}_{trading_date}_" + str(index)
-
-
-def get_message_dict_from_series(
-        message: pd.Series, ticker: str, trading_date: str, n_levels: int, start_index: int, freq: str
-):
-    return dict(
-        id=generate_internal_index(message.name + start_index, ticker, trading_date, n_levels, freq),
-        timestamp=message.timestamp,
-        exchange=EXCHANGE,
-        ticker=ticker,
-        direction=message.direction,
-        volume=message.volume,
-        price=message.price,
-        external_id=message.external_id,
-        message_type=message.message_type,
-    )
-
-
-def get_book_dict_from_series(
-        book: pd.Series, ticker: str, trading_date: str, n_levels: int, start_index: int, freq: str
-):
-    return dict(
-        id=generate_internal_index(book.name + start_index, ticker, trading_date, n_levels, freq),
-        timestamp=book.timestamp,
-        exchange=EXCHANGE,
-        ticker=ticker,
-        data=book.drop("timestamp").to_json(),
-    )
-
-
-EXCHANGE = "NASDAQ"

@@ -37,12 +37,13 @@ class Net:
     This class allows to compute the main methods to fit a model and predict output on testing set
     """
 
-    def __init__(self, model, lr: float = 0.01, epochs: int = 1, opt: str = 'Adam', wandb=None, save: bool = False,
-                 name: str = None, verbose: bool = False, hyperopt: bool = False):
+    def __init__(self, model, lr: float = 0.001, epochs: int = 1, opt: str = 'Adam', wandb=None, save: bool = False,
+                 name: str = None, verbose: bool = True, hyperopt: bool = False, seed: int = None):
         self.wandb = wandb
         self.save = save
         self.verbose = verbose
         self.hyperopt = hyperopt
+        self.seed = seed
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.criterion = nn.MSELoss()
         self.lr = lr
@@ -53,9 +54,13 @@ class Net:
         self.train_loss = None
         self.val_loss = None
         self.path = None
+        self.__set_seed()
         self.__instantiate_model(model)
         self.__instantiate_save(name)
         self.__instantiate_optimizer()
+
+    def __set_seed(self):
+        torch.manual_seed(self.seed)
 
     def __instantiate_model(self, model):
         self.model = Utils.to_device(model, self.device)
@@ -78,22 +83,28 @@ class Net:
             raise ValueError(f'{self.optimizer} has not been implemented')
 
     @staticmethod
-    def __transf(state: np.ndarray):
-        state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-        #if target is not None: target = torch.tensor(target, dtype=torch.float32)
+    def __transf(state: np.ndarray, target: np.ndarray = None, mask: np.ndarray = None):
+        state = torch.tensor(state, dtype=torch.float32)
+        if len(state.shape) == 2:
+            state = state.unsqueeze(0)
+        if mask is not None and target is not None:
+            target = torch.tensor(target, dtype=torch.float32)
+            mask = torch.tensor(mask, dtype=torch.float32).unsqueeze(0)
+            return state, target, mask
         return state
 
-    def __train_model(self, state: np.ndarray, target: torch.tensor):
+    def __train_model(self, state: np.ndarray, target: torch.tensor, mask: np.ndarray):
         # set the model in training mode
         self.model.train()
         # send input to device
-        state = self.__transf(state)
-        state, target = Utils.to_device((state, target), self.device)
+        state, target, mask = self.__transf(state, target, mask)
+        state, target, mask = Utils.to_device((state, target, mask), self.device)
         # zero out previous accumulated gradients
         self.optimizer.zero_grad() #not needed as no batch
         # perform forward pass and calculate accuracy + loss
-        outputs = self.model(state)
-        loss = self.criterion(outputs, target)
+        all_Q_values = self.model(state)
+        Q_values = torch.sum(all_Q_values * mask, dim=2)[0]
+        loss = self.criterion(Q_values, target)
         # perform backpropagation and update model parameters
         loss.backward()
         self.optimizer.step()
@@ -122,12 +133,12 @@ class Net:
             break_it = True
         return break_it
 
-    def fit(self, state: np.ndarray, target: torch.tensor):
+    def fit(self, state: np.ndarray, target: torch.tensor, mask: np.ndarray = None):
         my_es = EarlyStopping()
 
         for epoch in range(1, self.epochs + 1):
             start_time = time.time()
-            train_loss = self.__train_model(state, target)
+            train_loss = self.__train_model(state, target, mask)
 
             break_it = self.__compute_early_stopping(epoch, my_es, train_loss)
             if break_it:

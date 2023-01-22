@@ -74,6 +74,6 @@ def split_dates(split: float = None, date: datetime = None, hour_start: float = 
                 step_in_sec: float = None):
     start_train_date = date + timedelta(hours=hour_start) + timedelta(seconds=step_in_sec)
     end_test_date = date + timedelta(hours=hour_end)
-    end_train_date = start_train_date + (end_test_date - start_train_date) * split
+    end_train_date = (start_train_date + (end_test_date - start_train_date) * split).replace(microsecond=0)
     start_test_date = end_train_date + timedelta(seconds=step_in_sec)
     return [start_train_date, end_train_date, start_test_date, end_test_date]

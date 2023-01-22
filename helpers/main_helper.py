@@ -4,13 +4,13 @@ from utils.utils import boolean_string
 from datetime import datetime
 
 
-def add_env_args(parser, dates, step_size, lags):
+def add_env_args(parser, dates: list, step_size: float, lags: int, max_inv: int):
     parser.add_argument("-sz", "--step_size", default=step_size, help="Step size in seconds.", type=float)
     parser.add_argument("-t", "--ticker", default="MSFT", help="Specify stock ticker.", type=str)
     parser.add_argument("-ic", "--initial_cash", default=0, help="Initial portfolio.", type=float)
     parser.add_argument("-ii", "--initial_inventory", default=0, help="Initial inventory.", type=float)
     parser.add_argument("-ig", "--initial_gain", default=0, help="Initial gain.", type=float)
-    parser.add_argument("-mi", "--max_inventory", default=1000, help="Maximum (absolute) inventory.", type=int)
+    parser.add_argument("-mi", "--max_inventory", default=max_inv, help="Maximum (absolute) inventory.", type=int)
     parser.add_argument("-ia", "--inventory_aversion", default=0.1, help="Inventory aversion.", type=float)
     parser.add_argument("-n", "--normalisation_on", default=True, help="Normalise features.", type=boolean_string)
 

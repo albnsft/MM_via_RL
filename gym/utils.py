@@ -101,8 +101,10 @@ def plot_per_episode(
         train_reward = np.diff(step_info_per_episode.__dict__['pnls'])
         val_reward = np.diff(step_info_per_eval_episode.__dict__['pnls'])
         train_reward, test_reward, rewards = join_df(step_info_per_episode, step_info_per_eval_episode, train_reward, val_reward)
-        reward_roll_mean = pd.concat([train_reward.sort_index().rolling(window).mean(), test_reward.sort_index().rolling(window).mean()])
-        reward_roll_vol = pd.concat([train_reward.sort_index().rolling(window).std() ** 0.5, test_reward.sort_index().rolling(window).std() ** 0.5])
+        reward_roll_mean = pd.concat([train_reward.rolling(window, min_periods=1000).mean(),
+                                      test_reward.rolling(window, min_periods=1000).mean()]).dropna(how='all')
+        reward_roll_vol = pd.concat([train_reward.rolling(window, min_periods=1000).std() ** 0.5,
+                                     test_reward.rolling(window, min_periods=1000).std() ** 0.5]).dropna(how='all')
         stats = pd.DataFrame(rewards).describe()
         stats = np.round(stats)
         stats = stats.astype(int)
@@ -176,8 +178,8 @@ def plot_per_episode(
 
     plt.suptitle(name)
 
-    done_info = done_inf(done_info)
-    done_info_eval = done_inf(done_info_eval)
+    done_info = done_inf(done_info).iloc[episode-1].to_frame().T
+    done_info_eval = done_inf(done_info_eval).iloc[episode-1].to_frame().T
 
     table = ax_dict["Z"].table(
         cellText=done_info.values,
@@ -200,9 +202,13 @@ def plot_per_episode(
     ax_dict["Y"].title.set_text("Agent's characteristics testing")
 
 
-    equity_curve = graph_per_episode(step_info_per_episode, step_info_per_eval_episode, 'pnls')
-    equity_curve.plot(ax=ax_dict["A"], ylabel='aum', xlabel='n-th bar reaches',
-                      title=f'Equity curve through time')
+    pnl_curve = graph_per_episode(step_info_per_episode, step_info_per_eval_episode, 'pnls')
+    equity_curve = graph_per_episode(step_info_per_episode, step_info_per_eval_episode, 'aums')
+    curves = pd.concat([pnl_curve, equity_curve], axis=1)
+    curves.columns = ['pnl_training', 'pnl_testing', 'aum_training', 'aum_testing']
+    curves.plot(ax=ax_dict["A"], ylabel='$', xlabel='n-th bar reaches',
+                      title=f'PnL & AUM curves through time')
+
 
     inventory_curve = graph_per_episode(step_info_per_episode, step_info_per_eval_episode, 'inventories')
     inventory_curve.plot(ax=ax_dict["B"], ylabel='inventory', xlabel='n-th bar reaches',
@@ -228,8 +234,8 @@ def plot_per_episode(
     non_null_reward.plot.hist(ax=ax_dict["D"], title="Non null rewards histogram", bins=50, alpha=0.5)
 
     if rewards_roll_mean is not None:
-        rewards_roll_mean.plot(ax=ax_dict["E"], title=f'PnL rolling ({window}) mean')
-        rewards_roll_std.plot(ax=ax_dict["F"], title=f'PnL rolling ({window}) volatility')
+        rewards_roll_mean.iloc[100:].plot(ax=ax_dict["E"], title=f'PnL rolling ({window}) mean')
+        rewards_roll_std.iloc[100:].plot(ax=ax_dict["F"], title=f'PnL rolling ({window}) volatility')
 
     actions_train, actions_test = info_actions(step_info_per_episode, step_info_per_eval_episode)
     actions_f2train, actions_f1train, actions_f2test, actions_f1test = info_factions(step_info_per_episode, step_info_per_eval_episode)
@@ -245,7 +251,7 @@ def plot_per_episode(
 
     actions.plot.barh(ax=ax_dict["G"], title="Count agent's parameter actions (bid, sell)")
 
-    actions = actions.iloc[:-1] #delete market orders to count the pct of filled order, indeed market orders are always filled
+    actions.drop(np.where(actions.index.get_level_values(0).values==0)[0], level=1, inplace=True) #delete market orders to count the pct of filled order, indeed market orders are always filled
     not_filled = (actions.sum().values - actions_2filled.sum().values - actions_1filled.sum().values) / actions.sum().values
     not_filled = np.round(pd.DataFrame(not_filled*100, index=['Training', 'Testing'], columns=['Not filled actions (%)']).T, 1)
     #not_filled.plot.barh(ax=ax_dict["P"], title = "Not filled actions in units")
@@ -291,7 +297,7 @@ def plot_per_episode(
     pdf_path = os.path.join("results", agent_name)
     os.makedirs(pdf_path, exist_ok=True)
     subname = name.replace('\n', '').replace(' ', '_').replace(':', '').replace('|','')
-    pdf_filename = os.path.join(pdf_path, f"Ep_{episode}_{subname}.pdf")
+    pdf_filename = os.path.join(pdf_path, f"Ep_{episode}_{subname}.jpg")
     # Write plot to pdf
     fig.savefig(pdf_filename)
     plt.close(fig)

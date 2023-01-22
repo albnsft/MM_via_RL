@@ -21,12 +21,14 @@ class InfoCalculator(_InfoCalculator):
             verbose: bool = False
     ):
         self.verbose = verbose
+
+    def reset_episode(self):
         self.spreads = []
         self.inventories = []
         self.pnls, self.pnl = [], 0
         self.actions = {'tetha buy': [], 'tetha sell': []}
         self.filled_actions = deepcopy(self.actions)
-        self.aum = 0
+        self.aums, self.aum = [], 0
         self.nd_pnl = 0
         self.map = 0
         self.dates = []
@@ -59,6 +61,7 @@ class InfoCalculator(_InfoCalculator):
         self.nd_pnl = self.calculate_nd_pnl()
         self.map = self.calculate_map()
         self.aum = self.calculate_aum(internal_state)
+        self.aums.append(self.aum)
 
     def _compute_filled(self, internal_state: State) -> pd.DataFrame:
         col = [["buy", "sell"], ["price", "volume"]]

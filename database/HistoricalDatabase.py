@@ -1,138 +1,50 @@
 from datetime import datetime
 from typing import List, Union
 
-import ast
 import pandas as pd
 
-from sqlalchemy.engine.base import Engine
-from sqlalchemy.orm import sessionmaker
-
-from database.PostgresEngine import PostgresEngine
-from database.models import Base, Book, Message
-from orderbook.helpers import get_book_columns
+import os
+from database.database_population_helpers import (
+    get_book_snapshots,
+    get_file_len,
+    get_book_and_message_columns,
+    get_book_and_message_paths,
+    reformat_message_data,
+)
 
 
 class HistoricalDatabase:
-    def __init__(self, engine: Engine = None) -> None:
-        self.engine = engine or PostgresEngine().engine
-        self.session_maker = sessionmaker(bind=self.engine)
-        Base.metadata.create_all(bind=self.engine)
+    def __init__(self) -> None:
         self.exchange = "NASDAQ"  # This database currently only retrieves NASDAQ (LOBSTER) data
+        self.init()
 
-    def insert_messages(self, messages: List[Message]) -> None:
-        session = self.session_maker()
-        session.add_all(messages)
-        session.commit()
-        session.close()
-
-    def insert_books(self, books: List[Book]) -> None:
-        with self.session_maker() as session:
-            session.add_all(books)
-            session.commit()
-            session.close()
-
-    def insert_books_from_dicts(self, book_dicts: List[dict]) -> None:
-        with self.session_maker() as session:
-            session.bulk_insert_mappings(Book, book_dicts)
-            session.commit()
-            session.close()
-
-    def insert_messages_from_dicts(self, message_dicts: List[dict]) -> None:
-        with self.session_maker() as session:
-            session.bulk_insert_mappings(Message, message_dicts)
-            session.commit()
-            session.close()
+    def init(self, ticker: str = "MSFT"):
+        n_levels = 5
+        book_snapshot_freq = "S"
+        path_to_lobster_data: str = os.path.abspath(__file__).replace('\database\HistoricalDatabase.py', "\data")
+        trading_date = '2012-06-21'
+        book_cols, message_cols = get_book_and_message_columns(n_levels)
+        book_path, message_path = get_book_and_message_paths(path_to_lobster_data, ticker, trading_date, n_levels)
+        n_messages = get_file_len(message_path)
+        messages = pd.read_csv(message_path, header=None,names=message_cols)
+        self.messages = reformat_message_data(messages, trading_date)
+        self.books = get_book_snapshots(book_path, book_cols, messages, book_snapshot_freq, n_levels, n_messages)
+        self.books.set_index(['timestamp'], inplace=True)
+        self.messages.set_index(['timestamp'], drop=False, inplace=True)
+        self.messages['ticker'] = ticker
+        self.messages['timestamp'] = self.messages['timestamp'].round('U')
 
     def get_last_snapshot(self, timestamp: datetime, ticker: str) -> pd.DataFrame:
-        session = self.session_maker()
-        snapshot = (
-            session.query(Book)
-            .filter(Book.exchange == self.exchange)
-            .filter(Book.ticker == ticker)
-            .filter(Book.timestamp <= timestamp)
-            .order_by(Book.timestamp.desc(), Book.id.desc())
-            .first()
-        )
-        session.close()
-        if snapshot is None:
-            return pd.DataFrame()
-        else:
-            book_data = pd.DataFrame([snapshot.__dict__]).data[0]
-            ts = pd.DataFrame([snapshot.__dict__]).timestamp[0]
-            return self.transform_books(pd.Series(ast.literal_eval(book_data), name=ts))
-
-    def get_next_snapshot(self, timestamp: datetime, ticker: str) -> pd.DataFrame:
-        session = self.session_maker()
-        snapshot = (
-            session.query(Book)
-            .filter(Book.exchange == self.exchange)
-            .filter(Book.ticker == ticker)
-            .filter(Book.timestamp >= timestamp)
-            .order_by(Book.timestamp.asc(), Book.id.asc())
-            .first()
-        )
-        session.close()
-        if snapshot is None:
-            return pd.DataFrame()
-        else:
-            book_data = pd.DataFrame([snapshot.__dict__]).data[0]
-            ts = pd.DataFrame([snapshot.__dict__]).timestamp[0]
-            return self.transform_books(pd.Series(ast.literal_eval(book_data), name=ts))
-
-    def get_book_snapshots(self, start_date: datetime, end_date: datetime, ticker: str) -> pd.DataFrame:
-        session = self.session_maker()
-        snapshots = (
-            session.query(Book)
-            .filter(Book.exchange == self.exchange)
-            .filter(Book.ticker == ticker)
-            .filter(Book.timestamp.between(start_date, end_date))
-            .order_by(Book.timestamp.asc())
-            .all()
-        )
-        session.close()
-        snapshots_dict = [s.__dict__ for s in snapshots]
-        if len(snapshots_dict) > 0:
-            book_levels = pd.DataFrame(snapshots_dict).data
-            book_info = pd.DataFrame(snapshots_dict).drop(columns=["_sa_instance_state", "data"])
-            book_info.reset_index()
-            book_levels = book_levels.apply(self.convert_book_to_series)
-            return self.transform_books(pd.concat([book_info, book_levels], axis=1))
-        else:
-            return pd.DataFrame()
+        return self.transform_books(self.books.loc[self.books.index <= timestamp].iloc[-1])
 
     def get_messages(self, start_date: datetime, end_date: datetime, ticker: str) -> pd.DataFrame:
-        session = self.session_maker()
-        messages = (
-            session.query(Message)
-            .filter(Message.exchange == self.exchange)
-            .filter(Message.ticker == ticker)
-            .filter(Message.timestamp > start_date)
-            .filter(Message.timestamp <= end_date)
-            .order_by(Message.timestamp.asc(), Message.id.asc())
-            .all()
-        )
-        session.close()
-        messages_dict = [t.__dict__ for t in messages]
-        if len(messages_dict) > 0:
-            return self.transform_messages(pd.DataFrame(messages_dict).drop(columns=["_sa_instance_state"]))
+        messages = self.messages.loc[(self.messages.index > start_date) & (self.messages.index <= end_date)]
+        if len(messages) > 0:
+            messages = self.transform_messages(messages)
+            #messages['timestamp'] = messages['timestamp'].round('U')
+            return messages
         else:
             return pd.DataFrame()
-
-    def get_book_snapshot_series(
-        self, start_date: datetime, end_date: datetime, ticker: str, freq: str = "S", n_levels: int = 10
-    ) -> pd.DataFrame:
-        # TODO: speed this up by using postgres' "generate_series"
-        timestamp_series = pd.date_range(start_date, end_date, freq=freq)
-        book_columns = get_book_columns(n_levels)
-        book_df = pd.DataFrame(columns=book_columns)
-        for timestamp in timestamp_series:
-            book = pd.DataFrame(self.get_last_snapshot(timestamp=timestamp, ticker=ticker)).T[book_columns]
-            book_df = self.transform_books(pd.concat([book_df, book]))
-        return book_df
-
-    @staticmethod
-    def convert_book_to_series(book_data: str) -> pd.Series:
-        return pd.Series(ast.literal_eval(book_data))
 
     @staticmethod
     def transform_messages(messages: pd.DataFrame) -> pd.DataFrame:

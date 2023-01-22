@@ -71,7 +71,7 @@ class Feature(metaclass=abc.ABCMeta):
             # TODO: tidy this
             self.history.append(value + 1e-06)
         self.history.append(value)
-        return stats.zscore(self.history)[-1] #StandardScaler().fit_transform(np.array(self.history).reshape(-1, 1)).squeeze()[-1]
+        return stats.zscore(self.history)[-1]#MinMaxScaler([-1, 1]).fit_transform(np.array(self.history).reshape(-1, 1)).squeeze()[-1] #StandardScaler().fit_transform(np.array(self.history).reshape(-1, 1)).squeeze()[-1] stats.zscore(self.history)[-1]
 
     @abc.abstractmethod
     def reset(self, state: State, first_usage_time: Optional[datetime] = None):

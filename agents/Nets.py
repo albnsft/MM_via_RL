@@ -12,12 +12,14 @@ class Params:
     hidden_dim: int
     n_hidden: int
     dropout: float
+    seed: int
     output_dim: int = 9
 
 
 class Layers:
     def __init__(self, params: Params):
         self.params = params
+        torch.manual_seed(self.params.seed)
 
     def dropout(self):
         return nn.Dropout(p=self.params.dropout)
@@ -25,7 +27,6 @@ class Layers:
     def lstm(self):
         return nn.LSTM(input_size=self.params.input_dim,
                                hidden_size=self.params.hidden_dim,
-                               dropout=self.params.dropout,
                                batch_first=True)
 
     def linear(self):
@@ -58,7 +59,7 @@ class Layers:
         for i in range(self.params.n_hidden):
             self.params.input_dim = self.params.hidden_dim
             stack_layers = self.set(_type, stack_layers)
-        return stack_layers[:-1] #if Dropout layer on the outputs of each layer except the last layer
+        return stack_layers[:-1] #Dropout layer on the outputs of each layer except the last layer
 
 """
 class LSTM(nn.Module):
@@ -119,6 +120,5 @@ class DNN(nn.Module):
     def forward(self, x):
         for i, layer in enumerate(self.stack_layers):
             x = getattr(self, f'Layer_{str(i + 1).zfill(3)}')(x)
-        x = self.linear(x)
+        x = self.linear(x[0])
         return x
-
