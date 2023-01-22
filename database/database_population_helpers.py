@@ -6,18 +6,20 @@ from pathlib import Path
 from typing import Optional, Tuple
 from urllib.request import urlopen
 from zipfile import ZipFile
+import os
 
 import pandas as pd
 from orderbook.helpers import get_book_columns
 
 
-def download_lobster_sample_data(ticker: str, trading_date: str="2012-06-21", n_levels: int = 5, data_path: str = 'data'):
+def download_lobster_sample_data(ticker: str, trading_date: str="2012-06-21", n_levels: int = 5):
+    path= os.path.abspath(__file__).replace('\database\database_population_helpers.py', "\data")
     logging.info(f"Downloading book and message data for {ticker} on {trading_date} from LOBSTER.")
     zip_url = f"https://lobsterdata.com/info/sample/LOBSTER_SampleFile_{ticker}_{trading_date}_{n_levels}.zip"
     ssl._create_default_https_context = ssl._create_unverified_context  # This is a hack, and not ideal.
     with urlopen(zip_url) as zip_resp:
         with ZipFile(BytesIO(zip_resp.read())) as zip_file:
-            zip_file.extractall(data_path)
+            zip_file.extractall(path)
     logging.info(f"Book and message data for {ticker} on {trading_date} successfully downloaded.")
 
 

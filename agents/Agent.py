@@ -68,6 +68,8 @@ class Agent(metaclass=abc.ABCMeta):
             self.memory = deque(maxlen=int(10e3))  # deque collection for limited history to train agent
         else:
             self.episodes = 1
+            self.learn_env.threshold = 1
+            self.valid_env.threshold = 1
         if self.learn_env.max_inventory >= 10000:
             self.learn_env.market_order_fraction_of_inventory = 0  # no market order clearing
             self.learn_env.market_order_clearing = False
