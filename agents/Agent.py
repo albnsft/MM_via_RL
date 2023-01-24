@@ -1,7 +1,7 @@
 import abc
 import numpy as np
-from gym.HistoricalOrderbookEnvironment import HistoricalOrderbookEnvironment
-from gym.utils import plot_per_episode, plot_final
+from mygym.HistoricalOrderbookEnvironment import HistoricalOrderbookEnvironment
+from mygym.utils import plot_per_episode, plot_final
 from collections import deque
 from pylab import plt, mpl
 from copy import deepcopy
@@ -47,7 +47,7 @@ class Agent(metaclass=abc.ABCMeta):
         self._set_learning_args(epsilon, epsilon_min, epsilon_decay, gamma, batch_size)
         self.num_actions = 9
         self.step_info_per_episode = dict(map(lambda i: (i, None), range(1, self.episodes + 1)))
-        self.step_info_per_eval_episode = self.step_info_per_episode.copy()
+        self.step_info_per_eval_episode = deepcopy(self.step_info_per_episode)
         self.done_info = {'nd_pnl': [], 'map': [], 'aum': [], 'depth': []}
         self.done_info_eval = deepcopy(self.done_info)
         self.len_learn = None
@@ -75,11 +75,11 @@ class Agent(metaclass=abc.ABCMeta):
             self.learn_env.market_order_clearing = False
 
     @property
-    def actions(self) -> list:
+    def actions(self):
         return list(range(self.num_actions))
 
     @property
-    def action_space(self) -> ActionSpace:
+    def action_space(self):
         return ActionSpace(len(self.actions))
 
     @abc.abstractmethod
@@ -87,7 +87,7 @@ class Agent(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def get_name(self) -> str:
+    def get_name(self):
         pass
 
     def _greedy_policy(self, state: np.ndarray):
@@ -95,7 +95,7 @@ class Agent(metaclass=abc.ABCMeta):
             return self.action_space.sample()
         return self.get_action(state)
 
-    def _play_one_step(self, state: np.ndarray) -> tuple[np.ndarray, bool]:
+    def _play_one_step(self, state: np.ndarray):
         """
         Method to play with the action at each step
         Each step of is composed of 3 elements: a state, the resulting reward, and finally a Boolean indicating

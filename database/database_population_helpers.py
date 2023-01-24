@@ -39,7 +39,9 @@ def get_book_snapshots(
             + list(range(last_index + 1, total_daily_messages))
     )
     books = pd.read_csv(book_path, nrows=len(interval_series), skiprows=rows_to_skip, header=None, names=book_cols)
-    books = pd.concat([pd.Series(interval_series.values, name="timestamp"), books], axis=1)
+    price_columns = [col for col in books.columns if col.find('price') != -1]
+    books[price_columns] /= 10000
+    books.index = pd.Series(interval_series.values, name="timestamp")
     return books
 
 
@@ -65,11 +67,13 @@ def get_book_and_message_paths(data_path: str, ticker: str, trading_date: str, n
     return Path(book_path), Path(message_path)
 
 
-def reformat_message_data(messages: pd.DataFrame, trading_date: str) -> pd.DataFrame:
+def reformat_message_data(messages: pd.DataFrame, trading_date: str, ticker: str) -> pd.DataFrame:
     messages["timestamp"] = get_timestamps(messages, trading_date)
     messages.drop(["trading_date", "time"], axis=1, inplace=True)
     type_dict = get_external_internal_type_dict()
     messages.message_type.replace(type_dict.keys(), type_dict.values(), inplace=True)
+    messages.price /= 10000
+    messages['ticker'] = ticker
     update_direction(messages)
     messages.astype({"external_id": int})
     return messages
@@ -82,6 +86,11 @@ def get_timestamps(messages: pd.DataFrame, trading_date: str) -> pd.Series:
 
 
 def update_direction(messages: pd.DataFrame) -> None:
+    """
+    -1: Sell limit order
+    1: Buy limit order
+    Note: Execution of a sell (buy) limit order corresponds to a buyer (seller) initiated trade, i.e. buy (sell) trade.
+    """
     messages.loc[(messages.direction == -1) & (messages.message_type != "market"), "direction"] = "sell"
     messages.loc[(messages.direction == 1) & (messages.message_type == "market"), "direction"] = "sell"
     messages.loc[(messages.direction == 1) & (messages.message_type != "market"), "direction"] = "buy"

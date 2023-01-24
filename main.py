@@ -4,7 +4,7 @@ from helpers.main_helper import (
     add_env_args,
     get_env_configs,
 )
-from gym.utils import env_creator
+from mygym.utils import env_creator
 from agents.baseline_agents import FixedActionAgent, RandomAgent, LstmAgent, DnnAgent
 from utils.utils import split_dates
 

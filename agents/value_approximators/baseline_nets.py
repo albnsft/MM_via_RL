@@ -6,38 +6,12 @@ import numpy as np
 import time
 
 
-class EarlyStopping:
-    """
-    This class allows to :
-    Stop the training when the training loss doesn't decrease anymore
-    Useful to reduce the number of epoch
-    """
-
-    def __init__(
-            self,
-            tolerance: int = 10):
-
-        self.tolerance = tolerance
-        self.counter = 0
-        self.early_stop = False
-        self.best_loss = 1e5
-
-    def __call__(self, loss):
-        if round(loss, 3) >= round(self.best_loss, 3):
-            self.counter += 1
-            if self.counter >= self.tolerance:
-                self.early_stop = True
-        else:
-            self.best_loss = loss
-            self.counter = 0
-
-
 class Net:
     """
     This class allows to compute the main methods to fit a model and predict output on testing set
     """
 
-    def __init__(self, model, lr: float = 0.001, epochs: int = 1, opt: str = 'Adam', wandb=None, save: bool = False,
+    def __init__(self, model, lr: float = 0.001, opt: str = 'Adam', wandb=None, save: bool = False,
                  name: str = None, verbose: bool = True, hyperopt: bool = False, seed: int = None):
         self.wandb = wandb
         self.save = save
@@ -47,10 +21,9 @@ class Net:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.criterion = nn.MSELoss()
         self.lr = lr
-        self.epochs = epochs
         self.opt = opt
+        self.epochs = 1
         self.optimizer = None
-        self.best_epoch = None
         self.train_loss = None
         self.val_loss = None
         self.path = None
@@ -87,23 +60,30 @@ class Net:
         state = torch.tensor(state, dtype=torch.float32)
         if len(state.shape) == 2:
             state = state.unsqueeze(0)
-        if mask is not None and target is not None:
+        if target is not None:
             target = torch.tensor(target, dtype=torch.float32)
-            mask = torch.tensor(mask, dtype=torch.float32).unsqueeze(0)
-            return state, target, mask
+            if mask is not None:
+                mask = torch.tensor(mask, dtype=torch.float32).unsqueeze(0)
+                return state, target, mask
+            else:
+                return state, target
         return state
 
-    def __train_model(self, state: np.ndarray, target: torch.tensor, mask: np.ndarray):
+    def __train_model(self, state: np.ndarray, target: torch.tensor, mask: np.ndarray=None):
         # set the model in training mode
         self.model.train()
         # send input to device
-        state, target, mask = self.__transf(state, target, mask)
-        state, target, mask = Utils.to_device((state, target, mask), self.device)
+        if mask is None:
+            state, target = self.__transf(state, target)
+            state, target = Utils.to_device((state, target), self.device)
+        else:
+            state, target, mask = self.__transf(state, target, mask)
+            state, target, mask = Utils.to_device((state, target, mask), self.device)
         # zero out previous accumulated gradients
         self.optimizer.zero_grad() #not needed as no batch
         # perform forward pass and calculate accuracy + loss
         all_Q_values = self.model(state)
-        Q_values = torch.sum(all_Q_values * mask, dim=2)[0]
+        Q_values = all_Q_values if mask is None else torch.sum(all_Q_values * mask, dim=2)[0]
         loss = self.criterion(Q_values, target)
         # perform backpropagation and update model parameters
         loss.backward()
@@ -111,66 +91,47 @@ class Net:
         return loss.item()
 
     @torch.no_grad()
-    def __evaluate_model(self, state: np.ndarray, item: bool=None):
+    def __evaluate_model(self, state: np.ndarray, idmax: bool=None):
         # set the model in eval mode
         self.model.eval()
         # send input to device
         state = self.__transf(state)
         state = Utils.to_device(state, self.device)
         output = self.model(state)
-        if item: output = Utils.argmax(output)
+        if idmax: output = Utils.argmax(output)
         return output
 
     def __compute_verbose_train(self, epoch, start_time, train_loss):
         print("Epoch [{}] took {:.2f}s | train_loss: {:.4f}".format(epoch, time.time() - start_time, train_loss))
 
-    def __compute_early_stopping(self, epoch, my_es, train_loss):
-        break_it = False
-        my_es(train_loss)
-        if my_es.early_stop:
-            print(f'At epoch {epoch}, the second early stopping tolerance = {my_es.tolerance} has been reached,'
-                  f' the training loss is not decreasing anymore -> stop it')
-            break_it = True
-        return break_it
-
     def fit(self, state: np.ndarray, target: torch.tensor, mask: np.ndarray = None):
-        my_es = EarlyStopping()
 
-        for epoch in range(1, self.epochs + 1):
-            start_time = time.time()
-            train_loss = self.__train_model(state, target, mask)
+        start_time = time.time()
+        train_loss = self.__train_model(state, target, mask)
 
-            break_it = self.__compute_early_stopping(epoch, my_es, train_loss)
-            if break_it:
-                break
-
-            if not self.hyperopt:
-                if self.verbose:
-                    self.__compute_verbose_train(epoch, start_time, train_loss)
-            else:
-                pass
-                # Send the current validation loss and accuration back to Tune for the hyperopt
-                # Ray Tune can then use these metrics to decide which hyperparameter configuration lead to the best results.
-                #tune.report(train_loss=train_loss_mean, train_acc=train_acc_mean, val_loss=val_loss_mean, val_acc=val_acc_mean)
-
-            if self.save:
-                torch.save(self.model.state_dict(), f'{self.path}/model_{epoch}.pt')
-
-        if break_it:
-            self.best_epoch = epoch - my_es.tolerance
+        if not self.hyperopt:
+            if self.verbose:
+                self.__compute_verbose_train(self.epochs, start_time, train_loss)
         else:
-            self.best_epoch = epoch
+            pass
+            # Send the current validation loss and accuration back to Tune for the hyperopt
+            # Ray Tune can then use these metrics to decide which hyperparameter configuration lead to the best results.
+            #tune.report(train_loss=train_loss_mean, train_acc=train_acc_mean, val_loss=val_loss_mean, val_acc=val_acc_mean)
+
+        if self.save:
+            torch.save(self.model.state_dict(), f'{self.path}/model_{self.epochs}.pt')
+
         self.train_loss = train_loss
 
-    def predict(self, state: np.ndarray, item: bool=None):
+    def predict(self, state: np.ndarray, idmax: bool=None):
         """
         if self.best_epoch is not None:
             epoch = self.best_epoch
         else:
             epoch = Utils.find_last_epoch(self.path)
-        self.model = Utils.load_model(self.model, epoch, self.path, self.device)
+        self.model = Utils.load_model(self.model, self.path, self.device)
         """
-        prediction = self.__evaluate_model(state, item)
+        prediction = self.__evaluate_model(state, idmax)
         return prediction
 
 
@@ -190,12 +151,8 @@ class Utils:
         return torch.argmax(outputs).cpu().detach().item()
 
     @staticmethod
-    def find_last_epoch(path):
-        return int([f for f in os.listdir(path)][-1].split('_')[1].split('.')[0])
-
-    @staticmethod
-    def load_model(model, epoch, path, device):
-        path_ = f'{path}/model_{epoch}.pt' if epoch is not None else path
+    def load_model(model, path, device):
+        path_ = f'{path}/model_1.pt'
         if device.type == 'cpu':
             model.load_state_dict(torch.load(path_, map_location=torch.device('cpu')))
         else:

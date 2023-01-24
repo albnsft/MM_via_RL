@@ -4,7 +4,7 @@ import numpy as np
 import random
 
 from agents.Agent import Agent
-from gym.HistoricalOrderbookEnvironment import HistoricalOrderbookEnvironment
+from mygym.HistoricalOrderbookEnvironment import HistoricalOrderbookEnvironment
 
 from agents.value_approximators.baseline_nets import Net
 from agents.value_approximators.Nets import Params, LSTM, DNN
@@ -98,9 +98,11 @@ class BaseDQN(Agent):
             epsilon_min: float = 0.0001,
             epsilon_decay: float = 0.98,
             gamma: float = 0.97,
-            batch_size: int = 512,
+            batch_size: int = 1024,
+            type_algo: str = 'mask'
     ):
         super().__init__(learn_env, valid_env, True, episodes, epsilon, epsilon_min, epsilon_decay, gamma, batch_size)
+        self.type_algo = type_algo
         self._set_seed_rand()
 
     def _set_seed_rand(self):
@@ -111,35 +113,38 @@ class BaseDQN(Agent):
         pass
 
     @abc.abstractmethod
-    def _compute_prediction(self, state: np.ndarray, item: bool):
+    def _compute_prediction(self, state: np.ndarray, idmax: bool):
         pass
 
-    def get_action(self, state: np.ndarray) -> np.ndarray[int]:
+    def get_action(self, state: np.ndarray):
         """
         optimal policy is defined trivially as: when the agent is in state s, it will select the action with the highest
         value for that state
         """
-        action = self._compute_prediction(state, item=True)
-        #print(action)
-        return action
+        return self._compute_prediction(state, idmax=True)
 
     def replay(self):
         """
         Method to retrain the DQN model based on batches of memorized experiences
         Updating the policy function Q regularly, improve the learning considerably
         """
-        batch = random.sample(self.memory, self.batch_size)
-        states, actions, rewards, next_states, dones = [np.array([experience[field_index] for experience in batch])
-                                                        for field_index in range(5)]
+        batch = list(map(np.array, zip(*random.sample(self.memory, self.batch_size))))
+        states, actions, rewards, next_states, dones = batch
         """
         approximate Q-Value(target) should be close to the reward the agent gets after playing action a in state s
         plus the future discounted value of playing optimally from then on
         """
-        rewards += (1 - dones) * self.gamma * np.amax(self._compute_prediction(next_states, item=False).numpy(), axis=1)
-        masks = np.zeros((len(actions), len(self.actions)))
-        for i in range(len(actions)):
-            masks[i][actions[i]] = 1
-        self._compute_fit(states, rewards, masks)
+        rewards += (1 - dones) * self.gamma * np.amax(self._compute_prediction(next_states, idmax=False).cpu().numpy(), axis=1)
+
+        if self.type_algo != 'mask':
+            all_Q_values = self._compute_prediction(states, idmax=False).cpu().numpy()
+            all_Q_values_target = all_Q_values.copy()
+            all_Q_values_target[range(len(actions)), actions] = rewards
+            self._compute_fit(states, all_Q_values_target)
+        else:
+            masks = np.zeros((len(actions), len(self.actions)))
+            masks[range(len(actions)), actions] = 1
+            self._compute_fit(states, rewards, masks)
 
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
@@ -173,8 +178,8 @@ class DnnAgent(BaseDQN):
     def _compute_fit(self, state: np.ndarray, target, mask: np.ndarray = None):
         self.model.fit(state, target, mask)
 
-    def _compute_prediction(self, state: np.ndarray, item: bool):
-        return self.model.predict(state, item=item)
+    def _compute_prediction(self, state: np.ndarray, idmax: bool):
+        return self.model.predict(state, idmax=idmax)
 
 
 class LstmAgent(BaseDQN):
@@ -204,21 +209,5 @@ class LstmAgent(BaseDQN):
     def _compute_fit(self, state: np.ndarray, target, mask: np.ndarray = None):
         self.model.fit(state, target, mask)
 
-    def _compute_prediction(self, state: np.ndarray, item: bool):
-        return self.model.predict(state, item=item)
-
-
-"""
-    def replay(self):
-        batch = random.sample(self.memory, self.batch_size)
-        for state, action, reward, next_state, done in batch:
-            if not done:
-                reward += self.gamma * np.amax(self._compute_prediction(next_state, item=False)[0].numpy())
-            target = self._compute_prediction(state, item=False)
-            target[0, action] = reward
-            #The loss to be minimized is the MSE between the estimated Q-Value and the target
-            self._compute_fit(state, target)
-
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
-"""
+    def _compute_prediction(self, state: np.ndarray, idmax: bool):
+        return self.model.predict(state, idmax=idmax)
