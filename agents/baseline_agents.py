@@ -93,10 +93,10 @@ class BaseDQN(Agent):
             self,
             learn_env: HistoricalOrderbookEnvironment = None,
             valid_env: HistoricalOrderbookEnvironment = None,
-            episodes: int = 100,
-            epsilon: float = 0.7,
-            epsilon_min: float = 0.0001,
-            epsilon_decay: float = 0.98,
+            episodes: int = 1000,
+            epsilon: float = 0.95,
+            epsilon_min: float = 0.01,
+            epsilon_decay: float = 0.99,
             gamma: float = 0.97,
             batch_size: int = 1024,
             type_algo: str = 'mask'
@@ -155,7 +155,7 @@ class DnnAgent(BaseDQN):
             self,
             learn_env: HistoricalOrderbookEnvironment = None,
             valid_env: HistoricalOrderbookEnvironment = None,
-            hidden_dim: int = 32,
+            hidden_dim: int = 256,
             n_hidden: int = 1,
             lr: float = 0.001,
             dropout: float = 0.2
@@ -187,9 +187,9 @@ class LstmAgent(BaseDQN):
             self,
             learn_env: HistoricalOrderbookEnvironment = None,
             valid_env: HistoricalOrderbookEnvironment = None,
-            hidden_dim: int = 32,
+            hidden_dim: int = 256,
             n_hidden: int = 1,
-            lr: float = 0.01,
+            lr: float = 0.001,
             dropout: float = 0.2
 
     ):

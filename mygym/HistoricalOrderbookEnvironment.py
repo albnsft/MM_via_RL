@@ -83,7 +83,7 @@ class HistoricalOrderbookEnvironment:
             verbose=verbose
         )
         self.state: State = self._get_default_state()
-        self.threshold = 0.15
+        self.threshold = 0.1
         self.date_threshold: datetime = self.start_of_trading + (self.end_of_trading - self.start_of_trading) * self.threshold
         self.mm_threshold: int = int((self.date_threshold-self.start_of_trading).seconds)
         #print(f'Mark to market value threshold has been fixed to: {self.mm_threshold}$')

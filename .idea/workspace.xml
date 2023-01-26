@@ -4,13 +4,10 @@
     <list default="true" id="c535140a-31f0-4bde-920b-394a69300c6f" name="Changes" comment="Initial">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/agents/Agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/Agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/database/HistoricalDatabase.py" beforeDir="false" afterPath="$PROJECT_DIR$/database/HistoricalDatabase.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/features/Features.py" beforeDir="false" afterPath="$PROJECT_DIR$/features/Features.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/agents/baseline_agents.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/baseline_agents.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/mygym/HistoricalOrderbookEnvironment.py" beforeDir="false" afterPath="$PROJECT_DIR$/mygym/HistoricalOrderbookEnvironment.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orderbook/Exchange.py" beforeDir="false" afterPath="$PROJECT_DIR$/orderbook/Exchange.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/results/LstmAgent/Ep_1_MSFT_-_LstmAgent_-_Episode_1__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/results/LstmAgent/Ep_1_MSFT_-_LstmAgent_-_Episode_1__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rewards/RewardFunctions.py" beforeDir="false" afterPath="$PROJECT_DIR$/rewards/RewardFunctions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simulation/OrderbookSimulator.py" beforeDir="false" afterPath="$PROJECT_DIR$/simulation/OrderbookSimulator.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -132,7 +129,28 @@
       <option name="project" value="LOCAL" />
       <updated>1674589562204</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="Initial">
+      <created>1674752494191</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1674752494191</updated>
+    </task>
+    <task id="LOCAL-00010" summary="Initial">
+      <created>1674753165347</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1674753165347</updated>
+    </task>
+    <task id="LOCAL-00011" summary="Initial">
+      <created>1674753266777</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1674753266777</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

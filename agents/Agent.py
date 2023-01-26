@@ -115,7 +115,7 @@ class Agent(metaclass=abc.ABCMeta):
         done_info['aum'].append(info.aum)
         bar = len(info.inventories)
         done_info['depth'].append(bar)
-        if (episode-1) % 10 == 0:
+        if (episode - 1) % 10 == 0:
             templ = '\nepisode: {:2d}/{} | bar: {:2d}/{} | epsilon: {:5.2f}\n'
             templ += 'normalised pnl: {:5.2f} | mean abs position: {:5.2f}\n'
             templ += 'asset under management: {:5.2f} | success: {} \n'
@@ -154,15 +154,15 @@ class Agent(metaclass=abc.ABCMeta):
             self._validate(episode)
             if self.learning_agent and len(self.memory) > self.batch_size:
                 self.replay()
-            if episode % 10 == 0:
+            if (episode - 1) % 10 == 0:
                 plot_per_episode(self.learn_env.ticker, self.get_name(),
                                  self.learn_env.step_size, self.learn_env.market_order_fraction_of_inventory,
                                  self.learn_env.per_step_reward_function_midprice, self.step_info_per_episode,
                                  self.step_info_per_eval_episode, episode, self.done_info, self.done_info_eval)
-        if self.episodes > 1:
-            plot_final(self.done_info, self.done_info_eval, self.learn_env.ticker, self.get_name(),
-                       self.learn_env.step_size, self.learn_env.market_order_fraction_of_inventory,
-                       self.learn_env.per_step_reward_function_midprice)
+            if self.episodes > 1 and episode >= 100 and (episode - 1) % 100 == 0:
+                plot_final(self.done_info, self.done_info_eval, self.learn_env.ticker, self.get_name(),
+                           self.learn_env.step_size, self.learn_env.market_order_fraction_of_inventory,
+                           self.learn_env.per_step_reward_function_midprice)
         print(f'Time elapsed: {round((time.time() - start) / 3600, 3)} hours')
         if save: self.set_args()
 
