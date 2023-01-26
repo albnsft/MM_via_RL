@@ -2,35 +2,15 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c535140a-31f0-4bde-920b-394a69300c6f" name="Changes" comment="Initial">
-      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/agents/Agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/Agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agents/baseline_agents.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/baseline_agents.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agents/value_approximators/baseline_nets.py" beforeDir="false" afterPath="$PROJECT_DIR$/agents/value_approximators/baseline_nets.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/database/HistoricalDatabase.py" beforeDir="false" afterPath="$PROJECT_DIR$/database/HistoricalDatabase.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/database/database_population_helpers.py" beforeDir="false" afterPath="$PROJECT_DIR$/database/database_population_helpers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gym/HistoricalOrderbookEnvironment.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/gym/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/gym/action_interpretation/OrderDistributors.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/gym/action_interpretation/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/gym/order_tracking/InfoCalculators.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/gym/order_tracking/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/gym/utils.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/FixedAction_0/Ep_1_MSFT_-_FixedAction_0_-_Episode_1__step_size_0.1sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1.pdf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/FixedAction_0/Ep_1_MSFT_-_FixedAction_0_-_Episode_1__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1.pdf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/FixedAction_1/Ep_1_MSFT_-_FixedAction_1_-_Episode_1__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1.pdf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/FixedAction_2/Ep_1_MSFT_-_FixedAction_2_-_Episode_1__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1.pdf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/FixedAction_3/Ep_1_MSFT_-_FixedAction_3_-_Episode_1__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1.pdf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/FixedAction_4/Ep_1_MSFT_-_FixedAction_4_-_Episode_1__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1.pdf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/FixedAction_5/Ep_1_MSFT_-_FixedAction_5_-_Episode_1__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1.pdf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/FixedAction_6/Ep_1_MSFT_-_FixedAction_6_-_Episode_1__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1.pdf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/FixedAction_7/Ep_1_MSFT_-_FixedAction_7_-_Episode_1__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1.pdf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/FixedAction_8/Ep_1_MSFT_-_FixedAction_8_-_Episode_1__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1.pdf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/LstmAgent/Ep_2_MSFT_-_LstmAgent_-_Episode_2__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/RandomAgent/Ep_1_MSFT_-_RandomAgent_-_Episode_1__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1.pdf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/RandomAgent/Ep_1_MSFT_-_RandomAgent_-_Episode_1__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1_10000.pdf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/results/RandomAgent/Ep_1_MSFT_-_RandomAgent_-_Episode_1__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.pdf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/features/Features.py" beforeDir="false" afterPath="$PROJECT_DIR$/features/Features.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mygym/HistoricalOrderbookEnvironment.py" beforeDir="false" afterPath="$PROJECT_DIR$/mygym/HistoricalOrderbookEnvironment.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orderbook/Exchange.py" beforeDir="false" afterPath="$PROJECT_DIR$/orderbook/Exchange.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/results/LstmAgent/Ep_1_MSFT_-_LstmAgent_-_Episode_1__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/results/LstmAgent/Ep_1_MSFT_-_LstmAgent_-_Episode_1__step_size_1.0sec__reward_Asymmetrically_dampened_PnL__dampening_factor_0.1___order_clearing_factor_0.1.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rewards/RewardFunctions.py" beforeDir="false" afterPath="$PROJECT_DIR$/rewards/RewardFunctions.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simulation/OrderbookSimulator.py" beforeDir="false" afterPath="$PROJECT_DIR$/simulation/OrderbookSimulator.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -138,7 +118,21 @@
       <option name="project" value="LOCAL" />
       <updated>1674401470479</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="Initial">
+      <created>1674589548244</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1674589548244</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Initial">
+      <created>1674589562204</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1674589562204</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

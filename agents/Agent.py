@@ -65,7 +65,7 @@ class Agent(metaclass=abc.ABCMeta):
             self.epsilon_decay = epsilon_decay  # Decay rate for exploration rate, interval must be a pos function of the nb of xp
             self.gamma = gamma  # Discount factor for delayed reward
             self.batch_size = batch_size  # Batch size for replay
-            self.memory = deque(maxlen=int(10e3))  # deque collection for limited history to train agent
+            self.memory = deque(maxlen=int(10e4))  # deque collection for limited history to train agent
         else:
             self.episodes = 1
             self.learn_env.threshold = 1
@@ -115,19 +115,20 @@ class Agent(metaclass=abc.ABCMeta):
         done_info['aum'].append(info.aum)
         bar = len(info.inventories)
         done_info['depth'].append(bar)
-        templ = '\nepisode: {:2d}/{} | bar: {:2d}/{} | epsilon: {:5.2f}\n'
-        templ += 'normalised pnl: {:5.2f} | mean abs position: {:5.2f}\n'
-        templ += 'asset under management: {:5.2f} | success: {} \n'
-        if done_info is self.done_info:
-            if bar > round(self.len_learn): bar = round(self.len_learn)
-            success = True if bar == round(self.len_learn) else False
-            print(templ.format(episode, self.episodes, bar, round(self.len_learn), self.epsilon,
-                               info.nd_pnl, info.map, info.aum, success))
-        else:
-            if bar > round(self.len_val): bar = round(self.len_val)
-            success = True if bar == round(self.len_val) else False
-            print(templ.format(episode, self.episodes, bar, round(self.len_val), self.epsilon,
-                               info.nd_pnl, info.map, info.aum, success))
+        if episode % 10 == 0:
+            templ = '\nepisode: {:2d}/{} | bar: {:2d}/{} | epsilon: {:5.2f}\n'
+            templ += 'normalised pnl: {:5.2f} | mean abs position: {:5.2f}\n'
+            templ += 'asset under management: {:5.2f} | success: {} \n'
+            if done_info is self.done_info:
+                if bar > round(self.len_learn): bar = round(self.len_learn)
+                success = True if bar == round(self.len_learn) else False
+                print(templ.format(episode, self.episodes, bar, round(self.len_learn), self.epsilon,
+                                   info.nd_pnl, info.map, info.aum, success))
+            else:
+                if bar > round(self.len_val): bar = round(self.len_val)
+                success = True if bar == round(self.len_val) else False
+                print(templ.format(episode, self.episodes, bar, round(self.len_val), self.epsilon,
+                                   info.nd_pnl, info.map, info.aum, success))
 
     @abc.abstractmethod
     def replay(self):
@@ -139,7 +140,6 @@ class Agent(metaclass=abc.ABCMeta):
             print(50 * '*')
             print(f'           Training of {self.get_name()}      ')
             state = self.learn_env.reset()
-            # action = self.get_action(state)
             print(f'    Start of trading: {self.learn_env.state.now_is} ')
             self.len_learn = (self.learn_env.end_of_trading - self.learn_env.state.now_is) / self.learn_env.step_size
             while self.learn_env.end_of_trading >= self.learn_env.state.now_is:
@@ -148,15 +148,14 @@ class Agent(metaclass=abc.ABCMeta):
                     self.step_info_per_episode[episode] = self.learn_env.info_calculator
                     self._compute_done(self.step_info_per_episode, episode, self.done_info)
                     break
-            #if self.valid_env.start_of_trading.replace(microsecond=0) == self.learn_env.state.now_is:
-            #validate only if pertinent agent i.e had gone through the entire training env
             self._validate(episode)
             if self.learning_agent and len(self.memory) > self.batch_size:
                 self.replay()
-            plot_per_episode(self.learn_env.ticker, self.get_name(),
-                             self.learn_env.step_size, self.learn_env.market_order_fraction_of_inventory,
-                             self.learn_env.per_step_reward_function_midprice, self.step_info_per_episode,
-                             self.step_info_per_eval_episode, episode, self.done_info, self.done_info_eval)
+            if episode % 10 == 0:
+                plot_per_episode(self.learn_env.ticker, self.get_name(),
+                                 self.learn_env.step_size, self.learn_env.market_order_fraction_of_inventory,
+                                 self.learn_env.per_step_reward_function_midprice, self.step_info_per_episode,
+                                 self.step_info_per_eval_episode, episode, self.done_info, self.done_info_eval)
             print(50 * '*')
         if self.episodes > 1:
             plot_final(self.done_info, self.done_info_eval, self.learn_env.ticker, self.get_name(),

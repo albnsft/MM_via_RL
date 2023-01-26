@@ -30,7 +30,6 @@ class HistoricalDatabase:
         self.messages = reformat_message_data(messages, trading_date, ticker)
         self.books = get_book_snapshots(book_path, book_cols, messages, book_snapshot_freq, n_levels, n_messages)
         self.messages.set_index(['timestamp'], drop=False, inplace=True)
-        #self.messages['timestamp'] = self.messages['timestamp'].round('U')
 
     def get_last_snapshot(self, timestamp: datetime, ticker: str):
         return self.books.loc[self.books.index <= timestamp].iloc[-1]
@@ -38,7 +37,6 @@ class HistoricalDatabase:
     def get_messages(self, start_date: datetime, end_date: datetime, ticker: str):
         messages = self.messages.loc[(self.messages.index > start_date) & (self.messages.index <= end_date)]
         if len(messages) > 0:
-            #messages['timestamp'] = messages['timestamp'].round('U')
             return messages
         else:
             return pd.DataFrame()

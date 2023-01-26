@@ -2,8 +2,6 @@ import sys
 from collections import deque
 from datetime import datetime, timedelta
 
-from orderbook.create_order import create_order
-
 if sys.version_info[0] == 3 and sys.version_info[1] >= 8:
     from typing import Deque, Dict, List, Optional, Literal, Callable, cast
 else:
@@ -50,9 +48,8 @@ class OrderbookSimulator:
         if not start_book:
             start_book = self.get_historical_start_book(start_date)
         self.exchange.central_orderbook = start_book
-        self.exchange.reset_internal_orderbook()
         self._reset_initial_price_ranges()
-        #assert start_date.microsecond == 0, "Episodes must be started on the second."
+        assert start_date.microsecond == 0, "Episodes must be started on the second."
         self.now_is = start_date
         return start_book
 
@@ -71,7 +68,7 @@ class OrderbookSimulator:
                 filled_internal_orders += filled.internal
                 filled_external_orders += filled.external
         self.now_is = until
-        if (self._near_exiting_initial_price_range or self._exiting_worst_price) :#and self.now_is.microsecond == 0:
+        if (self._near_exiting_initial_price_range or self._exiting_worst_price) :
             self.update_outer_levels()
         return FilledOrders(internal=filled_internal_orders, external=filled_external_orders)
 
@@ -97,28 +94,16 @@ class OrderbookSimulator:
         if self.verbose: print(f"Updating outer levels. Current time is {self.now_is}.")
         orderbook_series = self.database.get_last_snapshot(self.now_is, ticker=self.ticker)
         orders_to_add = self._get_initial_orders_from_snapshot(orderbook_series, self._initial_prices_filter_function)
-        internal_orders_to_replace = list()
         for order in orders_to_add:
-            internal_book_side = getattr(self.exchange.internal_orderbook, order.direction)
-            internal_orders_to_cancel = list()
-            if order.price in internal_book_side.keys():
-                if self.verbose: print(
-                    "Resynchronising levels containing internal orders. These internal orders will be cancelled and"
-                    + " replaced at the back of the queue."
-                )
-                for internal_order in internal_book_side[order.price]:
-                    order_dict = cast(OrderDict, internal_order.__dict__)
-                    order_dict["timestamp"] = self.now_is
-                    cancellation = create_order("cancellation", order_dict)
-                    limit = create_order("limit", order_dict)
-                    internal_orders_to_cancel.append(cancellation)
-                    internal_orders_to_replace.append(limit)
-            for cancellation in internal_orders_to_cancel:
-                self.exchange.process_order(cancellation)
+            """
+            try:
+                to_delete = getattr(self.exchange.central_orderbook, order.direction)[order.price]
+                type_deleted = [getattr(delet, 'is_external') for delet in to_delete]
+                if 'False' in type_deleted: print('an internal order has been replaced by externals, seems wrong')
+            except KeyError:
+                pass
+            """
             getattr(self.exchange.central_orderbook, order.direction)[order.price] = deque([order])
-            assert order.price not in internal_book_side.keys(), "Orders remaining in internal book when updating!"
-        for order in internal_orders_to_replace:
-            self.exchange.process_order(order)
         self.min_buy_price = min(self.min_buy_price, self.exchange.orderbook_price_range[0])
         self.max_sell_price = max(self.max_sell_price, self.exchange.orderbook_price_range[1])
 
@@ -169,3 +154,46 @@ class OrderbookSimulator:
         self.min_buy_price, self.max_sell_price = self.exchange.orderbook_price_range
         self.initial_buy_price_range = self.exchange.best_buy_price - self.min_buy_price
         self.initial_sell_price_range = self.max_sell_price - self.exchange.best_sell_price
+
+    """
+     internal_book_side = getattr(self.exchange.internal_orderbook, order.direction)
+     internal_orders_to_cancel = list()
+     if order.price in internal_book_side.keys():
+         if self.verbose: print(
+             "Resynchronising levels containing internal orders. These internal orders will be cancelled and"
+             + " replaced at the back of the queue."
+         )
+         for internal_order in internal_book_side[order.price]:
+             order_dict = cast(OrderDict, internal_order.__dict__)
+             order_dict["timestamp"] = self.now_is
+             cancellation = create_order("cancellation", order_dict)
+             limit = create_order("limit", order_dict)
+             internal_orders_to_cancel.append(cancellation)
+             internal_orders_to_replace.append(limit)
+     for cancellation in internal_orders_to_cancel:
+         self.exchange.process_order(cancellation)
+     """
+
+    """
+    def add_levels(self, filled_order) -> None:
+        orderbook_series = self.database.get_last_snapshot(filled_order.timestamp, ticker=self.ticker)
+        opposite_direction = "sell" if filled_order.direction == "buy" else "buy"
+        orders = [order for order in self._get_initial_orders_from_snapshot(orderbook_series) if order.direction == opposite_direction]
+        for order in orders:
+            if not order.price in getattr(self.exchange.central_orderbook, opposite_direction).keys():
+                getattr(self.exchange.central_orderbook, opposite_direction)[order.price] = deque([order])
+        self.min_buy_price = min(self.min_buy_price, self.exchange.orderbook_price_range[0])
+        self.max_sell_price = max(self.max_sell_price, self.exchange.orderbook_price_range[1])
+    """
+
+    """
+    if len(self.exchange.central_orderbook.buy) < self.n_levels or \
+        len(self.exchange.central_orderbook.sell) < self.n_levels:
+    print(order.timestamp)
+    self.add_levels(order)
+    try:
+        assert(len(self.exchange.central_orderbook.buy) == self.n_levels)
+        assert (len(self.exchange.central_orderbook.sell) == self.n_levels)
+    except:
+        print('not same levels')
+    """

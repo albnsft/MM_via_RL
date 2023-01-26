@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import warnings
-from copy import deepcopy
 from datetime import datetime, timedelta
 import sys
 
@@ -18,6 +17,7 @@ import numpy as np
 from features.Features import (
     Feature,
     Spread,
+    baseState,
     State,
     PriceMove,
     Volatility,
@@ -83,7 +83,7 @@ class HistoricalOrderbookEnvironment:
             verbose=verbose
         )
         self.state: State = self._get_default_state()
-        self.threshold = 0.2
+        self.threshold = 0.15
         self.date_threshold: datetime = self.start_of_trading + (self.end_of_trading - self.start_of_trading) * self.threshold
         self.mm_threshold: int = int((self.date_threshold-self.start_of_trading).seconds)
         #print(f'Mark to market value threshold has been fixed to: {self.mm_threshold}$')
@@ -106,7 +106,7 @@ class HistoricalOrderbookEnvironment:
     def step(self, action: int):
         done = False
         internal_orders = self.convert_action_to_orders(action=action)
-        current_state = deepcopy(self.state)
+        current_state = baseState(price=self.state.price, portfolio=self.state.portfolio)
         self._forward(internal_orders)
         self._update_features()
         next_state = self.state
@@ -197,24 +197,10 @@ class HistoricalOrderbookEnvironment:
                 self.state.portfolio.inventory += order.volume
                 self.state.portfolio.cash -= order.volume * order.price
                 self.state.portfolio.gain += order.volume * (self.state.price - order.price)
-        """
-        from orderbook.models import LimitOrder, MarketOrder
-        if len(filled_orders.internal)>0:
-            print('*' * 50)
-            dir = [order.direction for order in filled_orders.internal]
-            print('Executed internal limit orders')
-            print(dir)
-            if isinstance(filled_orders.internal[0], LimitOrder): print(f'{filled_orders.internal[0].timestamp} gain for limit orders: {self.state.portfolio.gain}')
-            if isinstance(filled_orders.internal[0], MarketOrder): print(f'{filled_orders.internal[0].timestamp} gain for market orders: {self.state.portfolio.gain}')
-        """
 
     @property
     def central_orderbook(self):
         return self.simulator.exchange.central_orderbook
-
-    @property
-    def internal_orderbook(self):
-        return self.simulator.exchange.internal_orderbook
 
     @property
     def mark_to_market_value(self):

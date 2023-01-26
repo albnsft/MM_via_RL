@@ -26,6 +26,11 @@ class Portfolio:
 
 
 @dataclass
+class baseState:
+    price: float #midprice_orderbook
+    portfolio: Portfolio
+
+@dataclass
 class State:
     filled_orders: FilledOrders
     orderbook: Orderbook

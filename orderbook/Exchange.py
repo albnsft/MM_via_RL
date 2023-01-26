@@ -39,19 +39,13 @@ class CancellationVolumeExceededError(Exception):
 class Exchange:
     ticker: str = "MSFT"
     central_orderbook: Orderbook = None  # type: ignore
-    internal_orderbook: Orderbook = None  # type: ignore
-    n_levels: int = 5
+    max_levels: int = 1e10
 
     def __post_init__(self):
         self.central_orderbook = self.central_orderbook or self.get_empty_orderbook()
-        self.internal_orderbook = self.internal_orderbook or self.get_empty_orderbook()
-        for orderbook in [self.central_orderbook, self.internal_orderbook]:
-            assert orderbook.ticker == self.ticker, "Orderbook ticker must agree with the exchange ticker."
+        assert self.central_orderbook.ticker == self.ticker, "Orderbook ticker must agree with the exchange ticker."
         self.order_id_convertor = OrderIdConvertor()
         self.name = "NASDAQ"
-
-    def reset_internal_orderbook(self):
-        self.internal_orderbook = self.get_empty_orderbook()
 
     def process_order(self, order: Order) -> Optional[FilledOrders]:
         if hasattr(order, "volume") and order.volume is not None:
@@ -70,16 +64,12 @@ class Exchange:
         if self._does_order_cross_spread(order):
             return self.execute_order(order)  # Execute against orders already in the book
         order = self.order_id_convertor.add_internal_id_to_order_and_track(order)
-        orderbooks_to_update = [self.central_orderbook]
-        if not order.is_external:
-            orderbooks_to_update.append(self.internal_orderbook)
-        for orderbook in orderbooks_to_update:
-            try:
-                getattr(orderbook, order.direction)[order.price].append(order)
-            except KeyError:
-                getattr(orderbook, order.direction)[order.price] = deque([order])
-                #print(f'orderbook {order.direction} has {len(getattr(orderbook, order.direction))} levels')
-                #self._set_n_levels(orderbook, order)
+        try:
+            getattr(self.central_orderbook, order.direction)[order.price].append(order)
+        except KeyError:
+            getattr(self.central_orderbook, order.direction)[order.price] = deque([order])
+            if len(getattr(self.central_orderbook, order.direction)) > self.max_levels:
+                self._set_n_levels(self.central_orderbook, order)
         return None
 
     def execute_order(self, order: FillableOrder) -> FilledOrders:
@@ -88,25 +78,20 @@ class Exchange:
         remaining_volume = order.volume
         while remaining_volume > 0 and self._does_order_cross_spread(order):
             best_limit_order = self._get_highest_priority_matching_order(order)
-            if not order.is_external and not best_limit_order.is_external:  # Cannot fill our own order and so delete it
+            if not order.is_external and not best_limit_order.is_external:
                 deletion = Deletion(**copy(best_limit_order.__dict__))
                 self.process_order(deletion)
                 continue
             volume_to_execute = min(remaining_volume, best_limit_order.volume)
-            orderbooks_to_update = [self.central_orderbook]
-            if not best_limit_order.is_external:
-                orderbooks_to_update = [self.internal_orderbook, self.central_orderbook]
-            for orderbook in orderbooks_to_update:
-                executed_order = self._reduce_order_with_queue_position(
-                    best_limit_order,
-                    queue_position=0,
-                    volume_to_remove=volume_to_execute,
-                    orderbook=orderbook,
-                )
+            executed_order = self._reduce_order_with_queue_position(
+                best_limit_order,
+                queue_position=0,
+                volume_to_remove=volume_to_execute,
+                orderbook=self.central_orderbook,
+            )
             if executed_order.is_external:
                 executed_external_orders.append(executed_order)
             else:
-                #print(f'Counterparty of next executed internal order \n {order}')
                 executed_internal_orders.append(executed_order)
             remaining_volume -= volume_to_execute
             if not order.is_external:
@@ -121,30 +106,26 @@ class Exchange:
         return FilledOrders(internal=executed_internal_orders, external=executed_external_orders)
 
     def remove_order(self, order: Union[Cancellation, Deletion]) -> None:
-        orderbooks_to_update = [self.central_orderbook]
-        if not order.is_external:
-            orderbooks_to_update.append(self.internal_orderbook)
-        for orderbook in orderbooks_to_update:
-            queue_position = self._find_queue_position(order, orderbook)
-            if queue_position is None:
-                try:
-                    best_order_id = getattr(orderbook, order.direction)[order.price][0].internal_id
-                except KeyError:
-                    continue
-                if best_order_id == -1:  # Initial orders remain in book
-                    assert order.volume is not None, "When deleting an initial order, a volume must be provided."
-                    # NOTE: here, we are assuming that none of the order trying to be cancelled/deleted has been filled!
-                    order.internal_id = -1
-                    queue_position = 0
-                else:  # trying to remove order that has already been filled
-                    continue
-            elif isinstance(order, Deletion) and order.volume is None:
-                order.volume = getattr(orderbook, order.direction)[order.price][queue_position].volume
+        queue_position = self._find_queue_position(order, self.central_orderbook)
+        if queue_position is None:
             try:
-                self._reduce_order_with_queue_position(order, queue_position, order.volume, orderbook)
-            except CancellationVolumeExceededError:
-                volume_to_remove = getattr(orderbook, order.direction)[order.price][queue_position].volume
-                self._reduce_order_with_queue_position(order, queue_position, volume_to_remove, orderbook)
+                best_order_id = getattr(self.central_orderbook, order.direction)[order.price][0].internal_id
+            except KeyError:
+                return None
+            if best_order_id == -1:  # Initial orders remain in book
+                assert order.volume is not None, "When deleting an initial order, a volume must be provided."
+                # NOTE: here, we are assuming that none of the order trying to be cancelled/deleted has been filled!
+                order.internal_id = -1
+                queue_position = 0
+            else:  # trying to remove order that has already been filled
+                return None
+        elif isinstance(order, Deletion) and order.volume is None:
+            order.volume = getattr(self.central_orderbook, order.direction)[order.price][queue_position].volume
+        try:
+            self._reduce_order_with_queue_position(order, queue_position, order.volume, self.central_orderbook)
+        except CancellationVolumeExceededError:
+            volume_to_remove = getattr(self.central_orderbook, order.direction)[order.price][queue_position].volume
+            self._reduce_order_with_queue_position(order, queue_position, volume_to_remove, self.central_orderbook)
         return None
 
     def get_empty_orderbook(self):
@@ -195,9 +176,14 @@ class Exchange:
             return order.price <= self.best_buy_price
 
     def _set_n_levels(self, orderbook, order):
-        if order.is_external and len(getattr(orderbook, order.direction)) > self.n_levels:
-            idx_worst = 1 if order.direction == "sell" else 0
-            getattr(orderbook, order.direction).pop(self.orderbook_price_range[idx_worst])
+        idx_worst = 1 if order.direction == "sell" else 0
+        to_delete = getattr(orderbook, order.direction)[self.orderbook_price_range[idx_worst]]
+        """
+        type_deleted = [getattr(delet, 'is_external') for delet in to_delete]
+        if 'False' in type_deleted: print('an internal order has been deleted, seems wrong')
+        """
+        for order in list(to_delete):
+            self.remove_order(order)
 
     def _find_queue_position(
         self, order: Union[Cancellation, Deletion, LimitOrder], orderbook: Orderbook

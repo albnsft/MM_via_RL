@@ -1,11 +1,11 @@
 import abc
 
-from features.Features import State
+from features.Features import baseState, State
 
 
 class RewardFunction(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def calculate(self, current_state: State, next_state: State) -> float:
+    def calculate(self, current_state: baseState, next_state: State) -> float:
         pass
 
     @abc.abstractmethod
@@ -14,7 +14,7 @@ class RewardFunction(metaclass=abc.ABCMeta):
 
 
 class PnL(RewardFunction):
-    def calculate(self, current_state: State, next_state: State) -> float:
+    def calculate(self, current_state: baseState, next_state: State) -> float:
         return next_state.portfolio.gain + next_state.portfolio.inventory *\
                (next_state.price - current_state.price)
 
@@ -28,7 +28,7 @@ class InventoryAdjustedPnL(RewardFunction):
         self.pnl = PnL()
         self.asymmetrically_dampened = asymmetrically_dampened
 
-    def calculate(self, current_state: State, next_state: State) -> float:
+    def calculate(self, current_state: baseState, next_state: State) -> float:
         delta_midprice = next_state.price - current_state.price
         dampened_inventory_term = self.inventory_aversion * next_state.portfolio.inventory * delta_midprice
         if self.asymmetrically_dampened:
