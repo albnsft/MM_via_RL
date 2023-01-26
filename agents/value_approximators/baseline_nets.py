@@ -12,7 +12,7 @@ class Net:
     """
 
     def __init__(self, model, lr: float = 0.001, opt: str = 'Adam', wandb=None, save: bool = False,
-                 name: str = None, verbose: bool = True, hyperopt: bool = False, seed: int = None):
+                 name: str = None, verbose: bool = False, hyperopt: bool = False, seed: int = None):
         self.wandb = wandb
         self.save = save
         self.verbose = verbose
