@@ -101,11 +101,12 @@ class Agent(metaclass=abc.ABCMeta):
         Each step of is composed of 3 elements: a state, the resulting reward, and finally a Boolean indicating
         whether the episode ended at that point (done = True)
         """
+        state = state.copy()
         action = self._greedy_policy(state) if self.learning_agent else self.get_action(state)
-        next_state, reward, done, info = self.learn_env.step(action)  # get the resulting state and reward
+        next_state, reward, done, info = self.learn_env.step(action)# get the resulting state and reward
         if self.learning_agent:
             self.memory.append(
-                [state, action, reward, next_state, done])  # Storing the resulting experience in the replay buffer
+                [state, action, reward, next_state, done]) # Storing the resulting experience in the replay buffer
         return next_state, done
 
     def _compute_done(self, info, episode: int, done_info: dict):

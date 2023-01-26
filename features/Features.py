@@ -50,7 +50,7 @@ class Feature(metaclass=abc.ABCMeta):
         update_frequency: timedelta,
         lookback_periods: int,
         normalisation_on: bool,
-        max_norm_len: int = 10000,
+        max_norm_len: int = 100000,
     ):
         self.name = name
         self.min_value = min_value
@@ -76,7 +76,7 @@ class Feature(metaclass=abc.ABCMeta):
             # TODO: tidy this
             self.history.append(value + 1e-06)
         self.history.append(value)
-        return stats.zscore(self.history)[-1]#MinMaxScaler([-1, 1]).fit_transform(np.array(self.history).reshape(-1, 1)).squeeze()[-1] #StandardScaler().fit_transform(np.array(self.history).reshape(-1, 1)).squeeze()[-1] stats.zscore(self.history)[-1]
+        return MinMaxScaler([-1, 1]).fit_transform(np.array(self.history).reshape(-1, 1)).squeeze()[-1] #StandardScaler().fit_transform(np.array(self.history).reshape(-1, 1)).squeeze()[-1] stats.zscore(self.history)[-1]
 
     @abc.abstractmethod
     def reset(self, state: State, first_usage_time: Optional[datetime] = None):
