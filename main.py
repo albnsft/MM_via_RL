@@ -12,7 +12,7 @@ if __name__ == '__main__':
 
     ticker = "MSFT"
     step_in_sec = 1
-    lags = 100
+    lags = 50
     date = datetime(2012, 6, 21)
 
     dates = split_dates(split=0.75, date=date, hour_start=10, hour_end=15.5, step_in_sec=step_in_sec)

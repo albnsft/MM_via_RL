@@ -115,20 +115,26 @@ class Agent(metaclass=abc.ABCMeta):
         done_info['aum'].append(info.aum)
         bar = len(info.inventories)
         done_info['depth'].append(bar)
-        if episode % 10 == 0:
+        if (episode-1) % 10 == 0:
             templ = '\nepisode: {:2d}/{} | bar: {:2d}/{} | epsilon: {:5.2f}\n'
             templ += 'normalised pnl: {:5.2f} | mean abs position: {:5.2f}\n'
             templ += 'asset under management: {:5.2f} | success: {} \n'
             if done_info is self.done_info:
+                print(50 * '*')
+                print(f'           Training of {self.get_name()}      ')
+                print(f'    Start of trading: {self.learn_env.start_of_trading} ')
                 if bar > round(self.len_learn): bar = round(self.len_learn)
                 success = True if bar == round(self.len_learn) else False
                 print(templ.format(episode, self.episodes, bar, round(self.len_learn), self.epsilon,
                                    info.nd_pnl, info.map, info.aum, success))
             else:
+                print(f'          Validation of {self.get_name()}      ')
+                print(f'    Start of trading: {self.valid_env.start_of_trading} ')
                 if bar > round(self.len_val): bar = round(self.len_val)
                 success = True if bar == round(self.len_val) else False
                 print(templ.format(episode, self.episodes, bar, round(self.len_val), self.epsilon,
                                    info.nd_pnl, info.map, info.aum, success))
+                print(50 * '*')
 
     @abc.abstractmethod
     def replay(self):
@@ -137,10 +143,7 @@ class Agent(metaclass=abc.ABCMeta):
     def learn(self, save: bool = False):
         start = time.time()
         for episode in range(1, self.episodes + 1):
-            print(50 * '*')
-            print(f'           Training of {self.get_name()}      ')
             state = self.learn_env.reset()
-            print(f'    Start of trading: {self.learn_env.state.now_is} ')
             self.len_learn = (self.learn_env.end_of_trading - self.learn_env.state.now_is) / self.learn_env.step_size
             while self.learn_env.end_of_trading >= self.learn_env.state.now_is:
                 state, done = self._play_one_step(state)
@@ -156,7 +159,6 @@ class Agent(metaclass=abc.ABCMeta):
                                  self.learn_env.step_size, self.learn_env.market_order_fraction_of_inventory,
                                  self.learn_env.per_step_reward_function_midprice, self.step_info_per_episode,
                                  self.step_info_per_eval_episode, episode, self.done_info, self.done_info_eval)
-            print(50 * '*')
         if self.episodes > 1:
             plot_final(self.done_info, self.done_info_eval, self.learn_env.ticker, self.get_name(),
                        self.learn_env.step_size, self.learn_env.market_order_fraction_of_inventory,
@@ -169,9 +171,7 @@ class Agent(metaclass=abc.ABCMeta):
         Method to validate the performance of the DQL agent.
         only relies on the exploitation of the currently optimal policy
         """
-        print(f'          Validation of {self.get_name()}      ')
         state = self.valid_env.reset()
-        print(f'    Start of trading: {self.valid_env.state.now_is} ')
         self.len_val = (self.valid_env.end_of_trading - self.valid_env.state.now_is) / self.valid_env.step_size
         while self.valid_env.end_of_trading >= self.valid_env.state.now_is:
             action = self.get_action(state)
