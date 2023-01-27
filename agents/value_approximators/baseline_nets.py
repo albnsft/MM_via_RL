@@ -11,7 +11,7 @@ class Net:
     This class allows to compute the main methods to fit a model and predict output on testing set
     """
 
-    def __init__(self, model, lr: float = 0.001, opt: str = 'Adam', wandb=None, save: bool = False,
+    def __init__(self, model, lr: float = 0.001, opt: str = 'Adam', wandb=None, save: bool = True,
                  name: str = None, verbose: bool = False, hyperopt: bool = False, seed: int = None):
         self.wandb = wandb
         self.save = save
@@ -22,14 +22,13 @@ class Net:
         self.criterion = nn.MSELoss()
         self.lr = lr
         self.opt = opt
-        self.epochs = 1
         self.optimizer = None
         self.train_loss = None
         self.val_loss = None
         self.path = None
+        self.name = name
         self.__set_seed()
         self.__instantiate_model(model)
-        self.__instantiate_save(name)
         self.__instantiate_optimizer()
 
     def __set_seed(self):
@@ -38,14 +37,11 @@ class Net:
     def __instantiate_model(self, model):
         self.model = Utils.to_device(model, self.device)
 
-    def __instantiate_save(self, name):
-        if self.save:
-            base = os.path.dirname(os.path.abspath(__file__))
-            model = os.path.join(base, "models")
-            assert (name is not None)
-            self.path = os.path.join(model, name)
-            if not os.path.exists(self.path):
-                os.makedirs(self.path)
+    def set(self, path):
+        last_episode = Utils.find_last_episode(path.replace('EpisodeNone', ''))
+        self.path = path.replace('None', str(last_episode)) + '_model'
+        self.model, self.optimizer = Utils.load(self.model, self.optimizer, self.path, self.device)
+        return last_episode
 
     def __instantiate_optimizer(self):
         if self.opt == 'Adam':
@@ -111,26 +107,20 @@ class Net:
 
         if not self.hyperopt:
             if self.verbose:
-                self.__compute_verbose_train(self.epochs, start_time, train_loss)
+                self.__compute_verbose_train(1, start_time, train_loss)
         else:
             pass
             # Send the current validation loss and accuration back to Tune for the hyperopt
             # Ray Tune can then use these metrics to decide which hyperparameter configuration lead to the best results.
             #tune.report(train_loss=train_loss_mean, train_acc=train_acc_mean, val_loss=val_loss_mean, val_acc=val_acc_mean)
 
-        if self.save:
-            torch.save(self.model.state_dict(), f'{self.path}/model_{self.epochs}.pt')
-
         self.train_loss = train_loss
 
+    def save_args(self, path: str = None):
+        if path is not None: self.path = path + '_model'
+        Utils.save(self.model, self.optimizer, self.path)
+
     def predict(self, state: np.ndarray, idmax: bool=None):
-        """
-        if self.best_epoch is not None:
-            epoch = self.best_epoch
-        else:
-            epoch = Utils.find_last_epoch(self.path)
-        self.model = Utils.load_model(self.model, self.path, self.device)
-        """
         prediction = self.__evaluate_model(state, idmax)
         return prediction
 
@@ -151,10 +141,28 @@ class Utils:
         return torch.argmax(outputs).cpu().detach().item()
 
     @staticmethod
-    def load_model(model, path, device):
-        path_ = f'{path}/model_1.pt'
-        if device.type == 'cpu':
-            model.load_state_dict(torch.load(path_, map_location=torch.device('cpu')))
+    def save(model, optimizer, path):
+        torch.save({"model_state_dict": model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()},
+                    path)
+
+    @staticmethod
+    def find_last_episode(path):
+        try:
+            last_ep = int([f for f in os.listdir(path)][-1].split('_')[0][-1])
+        except IndexError:
+            last_ep = 0
+        return last_ep
+
+    @staticmethod
+    def load(model, optimizer, path, device):
+        if os.path.exists(path):
+            if device.type == 'cpu':
+                checkpoint = torch.load(path, map_location=torch.device('cpu'))
+            else:
+                checkpoint = torch.load(path)
+            model.load_state_dict(checkpoint['model_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            return model, optimizer
         else:
-            model.load_state_dict(torch.load(path_))
-        return model
+            return model, optimizer

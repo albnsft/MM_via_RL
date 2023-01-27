@@ -71,7 +71,6 @@ class HistoricalOrderbookEnvironment:
         self.n_levels = n_levels
         self.n_lags_feature = n_lags_feature if n_lags_feature==0 else n_lags_feature-1
         self.info_calculator = info_calculator or InfoCalculator(verbose=verbose)
-        self.pricer = lambda orderbook: orderbook.midprice
         self._check_params()
         self.max_inventory = max_inventory
         self.verbose = verbose
@@ -158,6 +157,10 @@ class HistoricalOrderbookEnvironment:
             self.state.buy_parameter = tetha_buy
             self.state.sell_parameter = tetha_sell
         return orders
+
+    @staticmethod
+    def pricer(orderbook):
+        return orderbook.midprice
 
     def _reset_features(self, episode_start: datetime):
         for feature in self.features:

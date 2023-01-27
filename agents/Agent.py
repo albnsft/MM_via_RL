@@ -6,6 +6,8 @@ from collections import deque
 from pylab import plt, mpl
 from copy import deepcopy
 import time
+import os
+import pickle
 
 plt.style.use('seaborn')
 mpl.rcParams['savefig.dpi'] = 300
@@ -143,7 +145,8 @@ class Agent(metaclass=abc.ABCMeta):
 
     def learn(self, save: bool = False):
         start = time.time()
-        for episode in range(1, self.episodes + 1):
+        last_ep = self._set_args()
+        for episode in range(last_ep, self.episodes + 1):
             state = self.learn_env.reset()
             self.len_learn = (self.learn_env.end_of_trading - self.learn_env.state.now_is) / self.learn_env.step_size
             while self.learn_env.end_of_trading >= self.learn_env.state.now_is:
@@ -160,12 +163,13 @@ class Agent(metaclass=abc.ABCMeta):
                                  self.learn_env.step_size, self.learn_env.market_order_fraction_of_inventory,
                                  self.learn_env.per_step_reward_function_midprice, self.step_info_per_episode,
                                  self.step_info_per_eval_episode, episode, self.done_info, self.done_info_eval)
-            if self.episodes > 1 and episode >= 100 and (episode - 1) % 100 == 0:
+            if self.learning_agent and episode >= 100 and (episode - 1) % 100 == 0:
                 plot_final(self.done_info, self.done_info_eval, self.learn_env.ticker, self.get_name(),
                            self.learn_env.step_size, self.learn_env.market_order_fraction_of_inventory,
                            self.learn_env.per_step_reward_function_midprice)
+            if self.learning_agent and episode > last_ep and (episode - 1) % 50 == 0:
+                self._save_args(episode)
         print(f'Time elapsed: {round((time.time() - start) / 3600, 3)} hours')
-        if save: self.set_args()
 
     def _validate(self, episode: int):
         """
@@ -181,3 +185,44 @@ class Agent(metaclass=abc.ABCMeta):
                 self.step_info_per_eval_episode[episode] = self.valid_env.info_calculator
                 self._compute_done(self.step_info_per_eval_episode, episode, self.done_info_eval)
                 break
+
+    def _get_path(self, episode: str = None):
+        ticker = self.learn_env.ticker
+        base = os.path.dirname(os.path.abspath(__file__))
+        agent = os.path.join(base, 'savings', self.get_name(), ticker)
+        if not os.path.exists(agent):
+            os.makedirs(agent)
+        return os.path.join(agent, 'Episode'+str(episode))
+
+    def _save_args(self, episode: int = None):
+        """
+        Save the attributes class when the learning of the agent is done
+        """
+        path = self._get_path(episode)
+        self._delete_earlier_args(path, episode)
+        model_agent = self.model
+        self.model = None
+        with open(f'{path}_agent.pkl', "wb") as file:
+            pickle.dump(self, file)
+        model_agent.save_args(path)
+        self.model = model_agent
+
+    def _delete_earlier_args(self, path, episode):
+        files = os.listdir(path.replace('Episode' + str(episode), ''))
+        for f in files:
+            os.remove(os.path.join(path.replace('Episode' + str(episode), f)))
+
+    def _set_args(self):
+        if self.learning_agent:
+            path = self._get_path()
+            last_ep = self.model.set(path)
+            if last_ep >= 1:
+                mymodel = self.model
+                print(f'Loading arguments from episode {last_ep} savings')
+                with open(path.replace('None', str(last_ep)) + '_agent.pkl', "rb") as file:
+                    self.__dict__ = pickle.load(file).__dict__
+                self.model = mymodel
+        else:
+            last_ep = 0
+        return last_ep + 1 #to not redo the same ep
+
