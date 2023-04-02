@@ -7,7 +7,7 @@ import sys
 from mygym.order_tracking.InfoCalculators import InfoCalculator
 
 if sys.version_info[0] == 3 and sys.version_info[1] >= 8:
-    from typing import List, Literal, Optional
+    from typing import List, Literal
 else:
     from typing import List
     from typing_extensions import Literal
@@ -116,7 +116,7 @@ class HistoricalOrderbookEnvironment:
         next_state = self.state
         reward = self.per_step_reward_function.calculate(current_state, next_state)
         features = self.get_features()
-        if self.terminal_time <= next_state.now_is: #or (self.mark_to_market_value < -self.mm_threshold and next_state.now_is > self.date_threshold):
+        if self.terminal_time <= next_state.now_is:
             reward = self.per_step_reward_function.calculate(current_state, next_state)
             done = True
         info = self.info_calculator.calculate(self.state, reward)
