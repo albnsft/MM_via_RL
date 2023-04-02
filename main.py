@@ -115,5 +115,8 @@ if __name__ == '__main__':
                                            max_inv=params['no_clearing'], inventry_aversion=params['small_damp'])
         agent = FixedActionAgent(i, train_env, eval_env)
         agent.learn()
+        _, eval_env = envs_creator(ticker_test, dates, step_in_sec, lags=params['lags_dnn'],
+                                   max_inv=params['no_clearing'], inventry_aversion=params['small_damp'])
+        agent.evaluate(eval_env)
 
     print('End')
