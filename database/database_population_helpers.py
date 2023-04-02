@@ -1,4 +1,3 @@
-import glob
 import logging
 import ssl
 from io import BytesIO
@@ -6,14 +5,14 @@ from pathlib import Path
 from typing import Optional, Tuple
 from urllib.request import urlopen
 from zipfile import ZipFile
-import os
+import glob
 
 import pandas as pd
 from orderbook.helpers import get_book_columns
 
 
 def download_lobster_sample_data(ticker: str, trading_date: str="2012-06-21", n_levels: int = 5):
-    path= os.path.abspath(__file__).replace('\database\database_population_helpers.py', "\data")
+    path= "\data"
     logging.info(f"Downloading book and message data for {ticker} on {trading_date} from LOBSTER.")
     zip_url = f"https://lobsterdata.com/info/sample/LOBSTER_SampleFile_{ticker}_{trading_date}_{n_levels}.zip"
     ssl._create_default_https_context = ssl._create_unverified_context  # This is a hack, and not ideal.
@@ -60,8 +59,8 @@ def get_book_and_message_columns(n_levels: int = 50):
 
 def get_book_and_message_paths(data_path: str, ticker: str, trading_date: str, n_levels: int) -> Tuple[Path, Path]:
     try:
-        book_path = glob.glob(data_path + "/" + f"{ticker}_{trading_date}_*_orderbook_{n_levels}.csv")[0]
-        message_path = glob.glob(data_path + "/" + f"{ticker}_{trading_date}_*_message_{n_levels}.csv")[0]
+        book_path = data_path + "/" + f"{ticker}_{trading_date}_34200000_57600000_orderbook_{n_levels}.csv"
+        message_path = data_path + "/" + f"{ticker}_{trading_date}_34200000_57600000_message_{n_levels}.csv"
     except IndexError:
         raise FileNotFoundError(f"Level {n_levels} data for ticker {ticker} on {trading_date} not found in {data_path}")
     return Path(book_path), Path(message_path)

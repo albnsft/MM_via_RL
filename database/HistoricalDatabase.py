@@ -17,7 +17,7 @@ class HistoricalDatabase:
         self.exchange = "NASDAQ"
         self.n_levels = 5
         self.book_snapshot_freq = "S"
-        self.path_to_lobster_data = os.path.abspath(__file__).replace('\database\HistoricalDatabase.py', "\data")
+        self.path_to_lobster_data = "data\\"
         self.trading_date = '2012-06-21'
         self.init(ticker)
 
