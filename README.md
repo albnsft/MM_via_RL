@@ -3,8 +3,8 @@
 Market making is a fundamental trading problem in which
 an agent continually quotes two-sided markets for securities, providing
 bids and asks that he is willing to trade. Market makers provide liquidity
-and depth to markets and earn their quoted spread if both orders are exe-
-cuted. They are compensated for the risk of holding securities, which may
+and depth to markets and earn their quoted spread if both orders are executed.
+They are compensated for the risk of holding securities, which may
 decline in value between the purchase and the sale. The accumulation of
 these unfavourable positions is known as inventory risk. In this paper,
 we develop a high-fidelity limit order book simulator based on historical
