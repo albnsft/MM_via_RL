@@ -10,7 +10,7 @@ these unfavourable positions is known as inventory risk. In this paper,
 we develop a high-fidelity limit order book simulator based on historical
 data with 5 levels on each side, and use it to design a market making
 agent using temporal-difference learning. We use a Deep Q-learning as a
-value function approximator, and design a custom reward function that
+value function approximator and a custom reward function that
 controls inventory risk.
 
 It is set up to use data provided by [LOBSTER](https://lobsterdata.com/).
