@@ -9,7 +9,7 @@ from mygym.HistoricalOrderbookEnvironment import HistoricalOrderbookEnvironment
 from agents.value_approximators.baseline_nets import Net
 from agents.value_approximators.Nets import Params, LSTM, DNN
 
-from torchsummary import summary
+#from torchsummary import summary
 
 from copy import deepcopy
 
