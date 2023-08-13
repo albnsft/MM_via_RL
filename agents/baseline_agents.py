@@ -160,7 +160,7 @@ class DnnAgent(BaseDQN):
         params = Params(input_dim=len(self.learn_env.features), hidden_dim=hidden_dim, n_hidden=n_hidden,
                         dropout=dropout, seed=self.seed)
         self.model = Net(DNN(params), lr=lr, name=self.get_name(), seed=self.seed)
-        #summary(self.model.model, (1, len(self.learn_env.features)))
+        summary(self.model.model, (1, len(self.learn_env.features)))
 
     def _compute_fit(self, state: np.ndarray, target):
         self.model.fit(state, target)
@@ -199,7 +199,7 @@ class LstmAgent(BaseDQN):
         params = Params(input_dim=len(self.learn_env.features), hidden_dim=hidden_dim, n_hidden=n_hidden,
                         dropout=dropout, seed=self.seed)
         self.model = Net(LSTM(params), lr=lr, name=self.get_name(), seed=self.seed)
-        #summary(self.model.model, (self.learn_env.n_lags_feature, len(self.learn_env.features)))
+        summary(self.model.model, (self.learn_env.n_lags_feature, len(self.learn_env.features)))
 
     def _compute_fit(self, state: np.ndarray, target):
         self.model.fit(state, target)

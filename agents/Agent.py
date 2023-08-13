@@ -142,6 +142,10 @@ class Agent(metaclass=abc.ABCMeta):
             plot_final(self.done_info_eval, self.learn_env.ticker, self.get_name(),
                        self.learn_env.step_size, self.learn_env.market_order_fraction_of_inventory,
                        self.learn_env.per_step_reward_function)
+            plot_per_episode(self.test_env.ticker, self.get_name(),
+                             self.test_env.step_size, self.test_env.market_order_fraction_of_inventory,
+                             self.test_env.per_step_reward_function, None,
+                             self.step_info_per_eval_episode, done_inf(self.done_info_eval).sort_values('aum', ascending=False).index[0], None, self.done_info_eval)
             self._set_best_ep()
         pnl, inv = self.evaluate(self.test_env)
         return pnl, inv

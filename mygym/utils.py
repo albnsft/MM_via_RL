@@ -244,11 +244,13 @@ def plot_per_episode(
         inventory_curve.plot(ax=ax_dict["B"], ylabel='inventory',
                              title=f'Inventory curve through time')
     else:
+        """
         mid_price = graph_per_episode(step_info_per_episode, step_info_per_eval_episode, 'mid_price')
         mid_inv = pd.concat([mid_price, inventory_curve], axis=1)
         mid_inv.columns = ['mid-price', 'inventory']
         mid_inv.plot(ax=ax_dict["Y"], ylabel='$', secondary_y=['inventory'],
                      title=f'Mid price and agent inventory')
+        """
 
     window = '30min'
     stats_rewards, rewards, aum_map_roll = info_metrics(step_info_per_episode,

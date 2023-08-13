@@ -21,6 +21,11 @@ if __name__ == '__main__':
     pnls_msft, invs_msft = [], []
     pnls_goog, invs_goog = [], []
 
+    train_env, eval_env = envs_creator(ticker, dates, step_in_sec, lags=params['lags_lstm'],
+                                       max_inv=params['no_clearing'], inventry_aversion=params['small_damp'])
+    agent = LstmAgent(train_env, eval_env)
+    pnl, inv = agent.learn()
+
     """
     SDLinearAgent: inventory-driven, η=0.1, layers=Linear()
     """
